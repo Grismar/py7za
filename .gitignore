@@ -1,0 +1,5 @@
+.idea/
+dist/
+sandbox/test.zip
+*.egg-info/
+*.py[ocd]
