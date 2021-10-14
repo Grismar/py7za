@@ -45,4 +45,4 @@ def run_7za(archive, path):
     t.join()
 
 
-run_7za('bin.zip', r'D:\0000\server_room_melbourne\\')
+run_7za('bin.zip', r'C:\0000\result_k80_local_write')

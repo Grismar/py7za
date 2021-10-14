@@ -1,5 +1,5 @@
-from typing import Union, Callable, List, Generator, Any
-from asyncio import wait, FIRST_COMPLETED, Queue, QueueEmpty
+from typing import Union, Awaitable, Iterable, Generator, Any
+from asyncio import wait, FIRST_COMPLETED, Queue
 
 
 class AsyncIOPool:
@@ -20,12 +20,11 @@ class AsyncIOPool:
             raise ValueError('AsyncIOPool.size needs to be at least 1')
         self._size = value
 
-    async def enqueue(self, task: Union[Callable, List[Callable]]):
-        if isinstance(task, list):
-            for t in task:
-                await self._tasks.put(t)
-        else:
-            await self._tasks.put(task)
+    async def enqueue(self, aws: Union[Awaitable, Iterable[Awaitable]]):
+        if not isinstance(aws, Iterable):
+            aws = [aws]
+        for aw in aws:
+            await self._tasks.put(aw)
 
     async def arun_many(self) -> Generator[Any, None, None]:
         """

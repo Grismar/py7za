@@ -3,6 +3,8 @@ from typing import Union, List
 from pathlib import Path
 from asyncio import create_subprocess_exec, run
 from asyncio.subprocess import PIPE
+from shutil import which
+from os import name as os_name
 
 __version__ = '0.0.1'
 
@@ -14,7 +16,7 @@ class Py7za:
     Attributes
     ----------
     executable_7za: str (class)
-        full file path to 7za.exe, executable from calling script working directory
+        full file path to 7za.exe, executable from calling script working directory (or just '7za' on non-Windows)
     progress: int
         7za operation progress
     files: List[str]
@@ -24,12 +26,16 @@ class Py7za:
     errors: bytes
         stderr of operation, once it completes (or fails)
     """
-    executable_7za = str(Path(__file__).parent / '../bin/7za.exe')
+    executable_7za = str(Path(__file__).parent / '../bin/7za.exe') if os_name == 'nt' else '7za'
 
     def __init__(self, arguments: Union[str, List[str]]):
+        if which(self.executable_7za) is None:
+            raise FileNotFoundError(f'7za executable "{self.executable_7za}" not found.')
+
         if isinstance(arguments, str):
             arguments = shlex.split(arguments, posix=False)
 
+        # ignore output arguments passed, always pass progress and output to 1, disable log
         self.arguments = [a for a in arguments if a[:3] not in ['-bs', '-bb']] + ['-bsp1', '-bso1', '-bb']
 
         self.progress = 0
@@ -37,9 +43,10 @@ class Py7za:
 
         self.done = False
         self.errors = None
+        self.return_code = None
 
     def __await__(self):
-        yield from self.arun().__await__()
+        return self.arun().__await__()
 
     def _parse_stdout(self, line):
         if line:
@@ -77,7 +84,8 @@ class Py7za:
                 self.done = True
                 if proc.returncode == 0:
                     self.progress = 100
-                return proc.returncode
+                self.return_code = proc.returncode
+                return self
 
     def run(self) -> int:
         """

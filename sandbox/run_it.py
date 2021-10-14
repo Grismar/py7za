@@ -5,16 +5,16 @@ from py7za import Py7za
 
 async def zip_print(zipper):
     while True:
-        sys.stdout.write(f'\r{zipper.progress} [{len(zipper.files)}]')
+        sys.stdout.write(f'\r{zipper.progress} [{len(zipper.files)}] last:{zipper.files[-1] if zipper.files else ""}')
         sys.stdout.flush()
         if zipper.done:
             return
-        await sleep(.5)
+        await sleep(0)
 
 
 async def main():
-    zipper = Py7za('a test.zip D:\\0000\\Sky')
-    await gather(zipper, zip_print(zipper))
+    zipper = Py7za(r'a test.zip C:\0000\mel')
+    print('\n', await gather(zipper, zip_print(zipper)))
 
 
 if __name__ == '__main__':
