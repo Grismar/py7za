@@ -6,8 +6,6 @@ from asyncio.subprocess import PIPE
 from shutil import which
 from os import name as os_name
 
-__version__ = '0.0.1'
-
 
 class Py7za:
     """
@@ -56,7 +54,7 @@ class Py7za:
             if len(line) >= 4 and line[3] == '%':
                 self.progress = int(line[:3].strip())
 
-    async def arun(self) -> int:
+    async def arun(self) -> 'Py7za':
         """
         Run 7za asynchronously, updating .progress and .files during the run and .done and errors when it completes
         :return: return code of process
