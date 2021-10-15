@@ -1,5 +1,28 @@
+# PyCharm project configuration
 .idea/
-dist/
-sandbox/test.zip
-*.egg-info/
+
+# VSCode project configuration
+.vscode/
+
+# default output location for examples
+output/
+
+# Python compiled intermediate files (bytecode / binaries)
+__pycache__/
 *.py[ocd]
+*$py.class
+
+# distribution / packaging files created by various tools
+build/
+develop-eggs/
+dist/
+sdist/
+*.egg-info/
+
+# common virtual environments
+env/
+venv/
+.env/
+.venv/
+
+sandbox/

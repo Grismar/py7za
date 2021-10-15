@@ -1,5 +1,5 @@
 import unittest
-import py7za
+from py7za import Py7za, AsyncIOPool
 
 
 class TestConfig(unittest.TestCase):

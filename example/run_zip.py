@@ -13,7 +13,7 @@ async def zip_print(zipper):
 
 
 async def main():
-    zipper = Py7za(r'a test.zip C:\0000\mel')
+    zipper = Py7za(r'a test.zip C:\Temp')
     print('\n', await gather(zipper, zip_print(zipper)))
 
 
