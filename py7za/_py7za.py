@@ -14,7 +14,7 @@ class Py7za:
     Attributes
     ----------
     executable_7za: str (class)
-        full file path to 7za.exe, executable from calling script working directory (or just '7za' on non-Windows)
+        full file path to 7za.exe, executable from calling relative dir (or just pre-installed '7za' on non-Windows)
     progress: int
         7za operation progress
     files: List[str]
@@ -57,7 +57,7 @@ class Py7za:
     async def arun(self) -> 'Py7za':
         """
         Run 7za asynchronously, updating .progress and .files during the run and .done and errors when it completes
-        :return: return code of process
+        :return: self (with updated attributes, like .return_code and .errors)
         """
         self.progress = 0
         self.files = []

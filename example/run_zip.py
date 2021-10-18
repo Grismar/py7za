@@ -9,7 +9,7 @@ async def zip_print(zipper):
         sys.stdout.flush()
         if zipper.done:
             return
-        await sleep(0)
+        await sleep(0.5)
 
 
 async def main():

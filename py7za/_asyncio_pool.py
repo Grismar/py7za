@@ -1,12 +1,12 @@
-from typing import Union, Awaitable, Iterable, Generator, Any
+from typing import Union, Awaitable, Iterable, Generator, Any, Optional
 from asyncio import wait, FIRST_COMPLETED, Queue
 
 
 class AsyncIOPool:
-    def __init__(self, size: int):
+    def __init__(self, pool_size: int):
         self._size = 1
         # assign through setter
-        self.size = size
+        self.size = pool_size
 
         self._tasks = Queue()
 
@@ -26,11 +26,14 @@ class AsyncIOPool:
         for aw in aws:
             await self._tasks.put(aw)
 
-    async def arun_many(self) -> Generator[Any, None, None]:
+    async def arun_many(self, aws: Optional[Union[Awaitable, Iterable[Awaitable]]] = None) \
+            -> Generator[Any, None, None]:
         """
         Run as many tasks as size allows in parallel, starting new ones when previous ones complete
-        :return: a generator that yields the results from the tasks as they complete
+        :return: a generator that yields result() from tasks as they complete
         """
+        if aws is not None:
+            await self.enqueue(aws)
         aws = set()
         while True:
             # room for more tasks and tasks queued

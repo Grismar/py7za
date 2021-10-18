@@ -1,0 +1,16 @@
+Average runtime over 3 runs in pool size 1: 46.206
+Average runtime over 3 runs in pool size 2: 24.493
+Average runtime over 3 runs in pool size 3: 17.674
+Average runtime over 3 runs in pool size 4: 14.323
+Average runtime over 3 runs in pool size 5: 12.725
+Average runtime over 3 runs in pool size 6: 11.691
+Average runtime over 3 runs in pool size 7: 11.155
+Average runtime over 3 runs in pool size 8: 10.926
+Average runtime over 3 runs in pool size 9: 10.449
+Average runtime over 3 runs in pool size 10: 10.274
+Average runtime over 3 runs in pool size 11: 9.963
+Average runtime over 3 runs in pool size 12: 9.734
+Average runtime over 3 runs in pool size 13: 9.618
+Average runtime over 3 runs in pool size 14: 9.549
+Average runtime over 3 runs in pool size 15: 9.495
+Average runtime over 3 runs in pool size 16: 9.435
