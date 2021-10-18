@@ -22,27 +22,31 @@ async def alternate():
         print(task_result.arguments, task_result.return_code)
 
 
-async def print_status(pool):
-    while True:
-        try:
-            sys.stdout.write(f'\rstatus: {pool.size}')
-        except AttributeError:
-            print('stop')
-        sys.stdout.flush()
-        if pool.size == 0:
-            return
-        await sleep(0.5)
-
-
 async def main_with_status():
     aiop = AsyncIOPool(pool_size=4)
+    running = set()
+    done = False
+
+    def start(py7za):
+        nonlocal running
+        running.add(py7za)
+
+    async def print_status():
+        nonlocal done, running
+        while True:
+            sys.stdout.write(f'\rstatus: {" ".join([str(py7za.progress) for py7za in running])}')
+            if done:
+                return
+            await sleep(0.5)
 
     async def run_them():
-        async for _ in aiop.arun_many(
-                [Py7za(f'a {TARGET}/{fn.name}.zip {fn}') for fn in Path(TEST_LOCATION).glob(FILES_TO_ZIP)]):
-            pass
+        nonlocal done, running
+        async for py7za in aiop.arun_many(
+                [Py7za(f'a {TARGET}/{fn.name}.zip {fn}', start) for fn in Path(TEST_LOCATION).glob(FILES_TO_ZIP)]):
+            running.remove(py7za)
+        done = True
 
-    await gather(run_them(), create_task(print_status(aiop)))
+    await gather(run_them(), print_status())
 
 
 if __name__ == '__main__':

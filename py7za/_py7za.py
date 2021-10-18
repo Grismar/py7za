@@ -1,5 +1,5 @@
 import shlex
-from typing import Union, List
+from typing import Union, List, Callable
 from pathlib import Path
 from asyncio import create_subprocess_exec, run
 from asyncio.subprocess import PIPE
@@ -26,7 +26,7 @@ class Py7za:
     """
     executable_7za = str(Path(__file__).parent / '../bin/7za.exe') if os_name == 'nt' else '7za'
 
-    def __init__(self, arguments: Union[str, List[str]]):
+    def __init__(self, arguments: Union[str, List[str]], on_start: Callable = None):
         if which(self.executable_7za) is None:
             raise FileNotFoundError(f'7za executable "{self.executable_7za}" not found.')
 
@@ -42,6 +42,8 @@ class Py7za:
         self.done = False
         self.errors = None
         self.return_code = None
+
+        self.on_start = on_start
 
     def __await__(self):
         return self.arun().__await__()
@@ -65,6 +67,8 @@ class Py7za:
         self.done = False
         self.errors = None
 
+        if self.on_start is not None:
+            self.on_start(self)
         proc = await create_subprocess_exec(self.executable_7za, *self.arguments, stdout=PIPE, stderr=PIPE)
 
         line = b''
