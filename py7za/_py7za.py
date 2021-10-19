@@ -31,7 +31,7 @@ class Py7za:
             raise FileNotFoundError(f'7za executable "{self.executable_7za}" not found.')
 
         if isinstance(arguments, str):
-            arguments = shlex.split(arguments, posix=False)
+            arguments = shlex.split(arguments)
 
         # ignore output arguments passed, always pass progress and output to 1, disable log
         self.arguments = [a for a in arguments if a[:3] not in ['-bs', '-bb']] + ['-bsp1', '-bso1', '-bb']

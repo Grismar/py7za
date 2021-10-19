@@ -4,7 +4,7 @@ from asyncio import run, gather, create_task, sleep
 from py7za import Py7za, AsyncIOPool
 
 
-TEST_LOCATION = r'C:\0000\20210407\HN_Scenarios'
+TEST_LOCATION = r'D:\sw_backup\swc-upload\TUFLOWFV\SC\bc'
 FILES_TO_ZIP = '**/*.csv'
 TARGET = 'output'
 
@@ -24,25 +24,40 @@ async def alternate():
 
 async def main_with_status():
     aiop = AsyncIOPool(pool_size=4)
-    running = set()
+    running = []
+    total = 0
+    current = 0
     done = False
 
+    def globber(root, glob_expr):
+        for fn in Path(root).glob(glob_expr):
+            yield fn.relative_to(root).parent, fn.name
+
     def start(py7za):
-        nonlocal running
-        running.add(py7za)
+        nonlocal running, current
+        current += 1
+        running.append(py7za)
 
     async def print_status():
-        nonlocal done, running
+        nonlocal done, running, current, total
         while True:
-            sys.stdout.write(f'\rstatus: {" ".join([str(py7za.progress) for py7za in running])}')
+            sys.stdout.write(f'\rstatus: {current}/{total} ... '
+                             f'{" ".join([f"{str(py7za.progress)}/100%" for py7za in running if py7za.progress])}')
             if done:
                 return
             await sleep(0.5)
 
     async def run_them():
-        nonlocal done, running
-        async for py7za in aiop.arun_many(
-                [Py7za(f'a {TARGET}/{fn.name}.zip {fn}', start) for fn in Path(TEST_LOCATION).glob(FILES_TO_ZIP)]):
+        nonlocal done, running, total
+        zippers = []
+        test_location = Path(TEST_LOCATION).absolute()
+        target = Path(TARGET).absolute()
+        for p, fn in globber(TEST_LOCATION, FILES_TO_ZIP):
+            if not (target / p).is_dir():
+                (target / p).mkdir(parents=True)
+            zippers.append(Py7za(f'a "{target / p / fn}.zip" "{test_location / p / fn}"', start))
+        total = len(zippers)
+        async for py7za in aiop.arun_many(zippers):
             running.remove(py7za)
         done = True
 
