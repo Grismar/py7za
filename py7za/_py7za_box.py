@@ -1,3 +1,4 @@
+from os import remove as os_remove
 from logging import error, warning
 from conffu import Config
 from pathlib import Path
@@ -48,6 +49,8 @@ async def box(cfg):
                 zippers.append(Py7za(f'e "{root / sub_path / fn}" -o"{target_path}"', start))
         total = len(zippers)
         async for py7za in aiop.arun_many(zippers):
+            if cfg['unbox'] and cfg['delete'] and (py7za.return_code == 0):
+                os_remove(py7za.arguments[1])
             running.remove(py7za)
         done = True
 

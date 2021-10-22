@@ -2,7 +2,7 @@ import os
 import re
 from setuptools import setup
 
-__name__ = 'python_package'
+__name__ = 'py7za'
 
 version_fn = os.path.join(__name__, "_version.py")
 __version__ = "unknown"
@@ -42,14 +42,13 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3.8',
     ],
-    setup_require={
-        'conffu'
-    },
     extras_require={
         'py7za-box': ['conffu']
     },
     python_requires='>=3.8',
     entry_points={
-        'console_scripts': ['py7za-box=py7za._py7za:cli_entry_point'],
-    }
+        'console_scripts': ['py7za-box=py7za._py7za_box:cli_entry_point'],
+    },
+    include_package_data=True,
+    package_data={'': ['bin/7za.exe', 'bin/7za-license.txt', 'bin/GNU_LGPL.txt']},
 )

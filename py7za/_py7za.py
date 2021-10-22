@@ -5,7 +5,6 @@ from asyncio import create_subprocess_exec, run
 from asyncio.subprocess import PIPE
 from shutil import which
 from os import name as os_name
-from os import chdir, getcwd
 
 
 class Py7za:
@@ -25,7 +24,7 @@ class Py7za:
     errors: bytes
         stderr of operation, once it completes (or fails)
     """
-    executable_7za = str(Path(__file__).parent / '../bin/7za.exe') if os_name == 'nt' else '7za'
+    executable_7za = str(Path(__file__).parent / 'bin/7za.exe') if os_name == 'nt' else '7za'
 
     def __init__(self, arguments: Union[str, List[str]], on_start: Callable = None, working_dir: str = '.'):
         if which(self.executable_7za) is None:
