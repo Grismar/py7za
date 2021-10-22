@@ -6,7 +6,7 @@ from subprocess import Popen, PIPE
 def available_cpu_count():
     """
     Determine the number of available virtual or physical CPUs on the system,
-    running the script, i.e. user/real as output by time(1) when called with
+    running the scripts, i.e. user/real as output by time(1) when called with
     an optimally scaling userspace-only program.
     :return: int, number of available virtual or physical CPUs
     """

@@ -42,5 +42,14 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3.8',
     ],
+    setup_require={
+        'conffu'
+    },
+    extras_require={
+        'py7za-box': ['conffu']
+    },
     python_requires='>=3.8',
+    entry_points={
+        'console_scripts': ['py7za-box=py7za._py7za:cli_entry_point'],
+    }
 )

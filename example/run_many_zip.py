@@ -2,11 +2,12 @@ import sys
 from pathlib import Path
 from asyncio import run, gather, create_task, sleep
 from py7za import Py7za, AsyncIOPool
+from conffu import Config
 
-
-TEST_LOCATION = r'D:\sw_backup\swc-upload\TUFLOWFV\SC\bc'
-FILES_TO_ZIP = '**/*.csv'
-TARGET = 'output'
+cfg = Config.startup()
+TEST_LOCATION = r'../scripts' if 'root' not in cfg else cfg.root
+FILES_TO_ZIP = '*.bat' if 'glob' not in cfg else cfg.glob
+TARGET = 'output' if 'target' not in cfg else cfg.target
 
 
 async def main():
@@ -57,8 +58,9 @@ async def main_with_status():
                 (target / p).mkdir(parents=True)
             zippers.append(Py7za(f'a "{target / p / fn}.zip" "{test_location / p / fn}"', start))
         total = len(zippers)
-        async for py7za in aiop.arun_many(zippers):
-            running.remove(py7za)
+        if total > 0:
+            async for py7za in aiop.arun_many(zippers):
+                running.remove(py7za)
         done = True
 
     await gather(run_them(), print_status())

@@ -1,16 +1,19 @@
 # Changelog
 
-## To do
-
-When each version is released:
-  - This log will be updated with up to date Added, Changed, Fixed, Removed for each version
-  - This To do section should be used to announce future changes, especially where they will impact users due to breaking backward compatibility, or to address major open issues that could not be addressed in the most recent release.
-  - The links from the version numbers currently assumes GitLab (which adds a hyphen, while GitHub does not); if anyone knows of a way to link to the tagged release that works across platforms, do let us know. Note: you have to `git tag <version>` and push the tag with `git push <version>`.
-
 ## [Unreleased]
 
+No changes since last release.
+
+## [0.0.2] - 2021-10-22
+
+First release in the wild.
+
 ### Added
-  - etc.
+  - Core Py7za class wrapping 7za.exe
+  - AsyncIOPool CPU pooling
+  - `py7za-box` CLI tool
+  - Use of pre-installed 7za on Linux
+  - Unit tests
 
 ## [0.0.1] - 2021-08-04
 
@@ -18,4 +21,5 @@ When each version is released:
   - Cloned and adapted from python_package_template
 
 [Unreleased]: /../../../
+[0.0.2]: /../../../tags/0.0.2
 [0.0.1]: /../../../tags/0.0.1

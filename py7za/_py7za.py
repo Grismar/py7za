@@ -5,6 +5,7 @@ from asyncio import create_subprocess_exec, run
 from asyncio.subprocess import PIPE
 from shutil import which
 from os import name as os_name
+from os import chdir, getcwd
 
 
 class Py7za:
@@ -26,7 +27,7 @@ class Py7za:
     """
     executable_7za = str(Path(__file__).parent / '../bin/7za.exe') if os_name == 'nt' else '7za'
 
-    def __init__(self, arguments: Union[str, List[str]], on_start: Callable = None):
+    def __init__(self, arguments: Union[str, List[str]], on_start: Callable = None, working_dir: str = '.'):
         if which(self.executable_7za) is None:
             raise FileNotFoundError(f'7za executable "{self.executable_7za}" not found.')
 
@@ -42,6 +43,8 @@ class Py7za:
         self.done = False
         self.errors = None
         self.return_code = None
+
+        self.working_dir = working_dir
 
         self.on_start = on_start
 
@@ -69,7 +72,9 @@ class Py7za:
 
         if self.on_start is not None:
             self.on_start(self)
-        proc = await create_subprocess_exec(self.executable_7za, *self.arguments, stdout=PIPE, stderr=PIPE)
+
+        proc = await create_subprocess_exec(
+            self.executable_7za, *self.arguments, stdout=PIPE, stderr=PIPE, cwd=self.working_dir)
 
         line = b''
         while True:

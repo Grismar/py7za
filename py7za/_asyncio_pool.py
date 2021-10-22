@@ -41,10 +41,11 @@ class AsyncIOPool:
                 # add the next task
                 aws.add(await self._tasks.get())
             else:
-                # run the current pool of tasks until one completes
-                done, aws = await wait(aws, return_when=FIRST_COMPLETED)
-                for task in done:
-                    yield task.result()
+                if aws:
+                    # run the current pool of tasks until one completes
+                    done, aws = await wait(aws, return_when=FIRST_COMPLETED)
+                    for task in done:
+                        yield task.result()
             # no more awaitables, then done
             if not aws and self._tasks.empty():
                 break
