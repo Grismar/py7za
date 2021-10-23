@@ -92,3 +92,59 @@ class TestPy7zaBox(unittest.IsolatedAsyncioTestCase):
         await box(Config(CLI_DEFAULTS | {'root': 'data/source', 'glob': '*.csv.zip', 'unbox': True}))
         self.assertTrue(Path('data/source/x.csv').is_file(), 'original is back after unbox')
         self.assertFalse(Path('data/source/x.csv.zip').is_file(), 'archive removed after unbox')
+
+    async def test_box_overwrite_zip(self):
+        await box(Config(CLI_DEFAULTS | {'root': 'data/source', 'glob': 'x.csv', 'delete': False}))
+        self.assertTrue(Path('data/source/x.csv.zip').is_file(), 'archive exists after first box')
+        await box(Config(CLI_DEFAULTS | {'root': 'data/source', 'glob': 'x.csv'}))
+        self.assertFalse(Path('data/source/x.csv').is_file(), 'original is gone after box')
+        with ZipFile('data/source/x.csv.zip') as zf:
+            self.assertEqual(1, len(zf.filelist), 'Only one file in resulting archive')
+
+    async def _do_test_overwrite(self, mode=None):
+        with open('data/source/x.csv') as f:
+            content = f.read()
+        await box(Config(CLI_DEFAULTS | {'root': 'data/source', 'glob': 'x.csv', 'delete': False}))
+        with open('data/source/x.csv', 'a') as f:
+            f.write('extra')
+            new_content = content + 'extra'
+        if mode is None:
+            await box(Config(CLI_DEFAULTS | {'root': 'data/source', 'glob': 'x.csv.zip', 'unbox': True}))
+        else:
+            await box(Config(CLI_DEFAULTS | {'root': 'data/source', 'glob': 'x.csv.zip', 'unbox': True,
+                                             'overwrite': mode}))
+        return content, new_content
+
+    async def test_box_overwrite_source_skip_default(self):
+        content, new_content = await self._do_test_overwrite()
+        self.assertFalse(Path('data/source/x.csv.zip').is_file(), 'archive is gone after unbox')
+        self.assertTrue(Path('data/source/x.csv').is_file(), '"original" file exist')
+        with open('data/source/x.csv') as f:
+            self.assertEqual(new_content, f.read(), 'Content of original file untouched, no overwrite')
+
+    async def test_box_overwrite_source_all(self):
+        content, new_content = await self._do_test_overwrite('a')
+        self.assertFalse(Path('data/source/x.csv.zip').is_file(), 'archive is gone after unbox')
+        self.assertTrue(Path('data/source/x.csv').is_file(), '"original" file exist')
+        with open('data/source/x.csv') as f:
+            self.assertEqual(content, f.read(), 'Content of original file back to original, overwritten')
+
+    async def test_box_overwrite_source_rename_new(self):
+        content, new_content = await self._do_test_overwrite('u')
+        self.assertFalse(Path('data/source/x.csv.zip').is_file(), 'archive is gone after unbox')
+        self.assertTrue(Path('data/source/x.csv').is_file(), '"original" file exist')
+        with open('data/source/x.csv') as f:
+            self.assertEqual(new_content, f.read(), 'Content of original file untouched, no overwrite')
+        self.assertTrue(Path('data/source/x_1.csv').is_file(), 'extracted file was renamed')
+        with open('data/source/x_1.csv') as f:
+            self.assertEqual(content, f.read(), 'Extracted file contains original content')
+
+    async def test_box_overwrite_source_rename_existing(self):
+        content, new_content = await self._do_test_overwrite('t')
+        self.assertFalse(Path('data/source/x.csv.zip').is_file(), 'archive is gone after unbox')
+        self.assertTrue(Path('data/source/x.csv').is_file(), '"original" file exist')
+        with open('data/source/x.csv') as f:
+            self.assertEqual(content, f.read(), 'extracted file to original name, original content')
+        self.assertTrue(Path('data/source/x_1.csv').is_file(), 'existing file was renamed')
+        with open('data/source/x_1.csv') as f:
+            self.assertEqual(new_content, f.read(), 'Existing files still contains new content')
