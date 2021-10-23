@@ -1,12 +1,13 @@
 import unittest
 from pathlib import Path
 from shutil import rmtree
-from py7za._py7za_box import box, CLI_DEFAULTS
+from py7za.py7za_box import box, CLI_DEFAULTS
 from conffu import Config
 from zipfile import ZipFile
 from os import chdir, getcwd
 
 chdir(Path(__file__).parent)
+CLI_DEFAULTS['output'] = 'q'
 
 
 class TestPy7zaBox(unittest.IsolatedAsyncioTestCase):

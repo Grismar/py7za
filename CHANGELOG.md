@@ -4,6 +4,12 @@
 
 No changes since last release.
 
+## [0.0.4] - 2021-10-23
+
+### Added
+  - `nice_size` for pretty-printing file sizes
+  - output modes default, verbose, status and quiet (previous default) 
+
 ## [0.0.3] - 2021-10-22
 
 First PyPI release.

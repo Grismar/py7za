@@ -1,14 +1,19 @@
-from os import remove as os_remove
-from logging import error, warning
+from sys import stdout
+from os import remove as os_remove, stat
+from logging import error, warning, info
 from conffu import Config
 from pathlib import Path
-from asyncio import run
-from py7za import Py7za, AsyncIOPool, available_cpu_count
+from asyncio import run, sleep, gather
+from py7za import Py7za, AsyncIOPool, available_cpu_count, nice_size
+# only used for status
+from zipfile import ZipFile
 
 
 async def box(cfg):
     total = 0
     done = False
+    total_content_size = 0
+    total_zip_size = 0
     current = 0
     running = []
     aiop = AsyncIOPool(pool_size=cfg['cores'] if cfg['cores'] else available_cpu_count())
@@ -16,27 +21,52 @@ async def box(cfg):
     cli_options = '' if not cfg['delete'] or cfg['unbox'] else '-sdel '
     cli_options += cfg['7za'] if '7za' in cfg else ''
 
+    print_result = cfg.output in 'vd'
+    info_command = cfg.output == 'v'
+    update_status = cfg.output == 's'
+
+    unbox = cfg['unbox']
+    delete = cfg['delete']
+    create_folders = cfg['create_folders']
+    zip_structure = cfg['zip_structure']
+    si = cfg['si']
+
     def globber(root, glob_expr):
         for fn in Path(root).glob(glob_expr):
             if (fn.is_dir() and cfg['match_dir']) or (fn.is_file() and cfg['match_file']):
                 yield fn.relative_to(root).parent, fn.name
 
     def start(py7za):
-        nonlocal running, current
+        nonlocal running, current, info_command
+        if info_command:
+            info(f'In {py7za.working_dir}: '.join([py7za.executable_7za, *py7za.arguments]))
         current += 1
         running.append(py7za)
 
+    async def print_status():
+        nonlocal done, running, current, total
+        while True:
+            if total == 0:
+                stdout.write(f'\rStarting ... ')
+            else:
+                stdout.write(f'\rProcessing: {current}/{total} ... '
+                             f'{" ".join([f"{str(py7za.progress)}/100%" for py7za in running if py7za.progress])}')
+            if done:
+                return
+            await sleep(0.5)
+
     async def run_all():
-        nonlocal aiop, total, done
+        nonlocal aiop, total, done, total_content_size, total_zip_size
         zippers = []
+
         root = Path(cfg.root).absolute()
         target = Path(cfg.target).absolute() if 'target' in cfg else root
         for sub_path, fn in globber(cfg.root, cfg.glob):
-            if cfg['create_folders']:
+            if create_folders:
                 (target / sub_path).mkdir(parents=True, exist_ok=True)
-            if not cfg['unbox']:
-                target_path = target / sub_path / fn if cfg['create_folders'] else target / fn
-                if cfg['zip_structure']:
+            if not unbox:
+                target_path = target / sub_path / fn if create_folders else target / fn
+                if zip_structure:
                     content = sub_path / fn
                     wd = str(root)
                 else:
@@ -45,16 +75,31 @@ async def box(cfg):
                 zippers.append(
                     Py7za(f'a "{target_path}.zip" "{content}" {cli_options}', on_start=start, working_dir=wd))
             else:
-                target_path = target / sub_path if cfg['create_folders'] else target
+                target_path = target / sub_path if create_folders else target
                 zippers.append(Py7za(f'e "{root / sub_path / fn}" -o"{target_path}"', start))
         total = len(zippers)
         async for py7za in aiop.arun_many(zippers):
-            if cfg['unbox'] and cfg['delete'] and (py7za.return_code == 0):
+            if print_result or update_status:
+                fn = py7za.arguments[1]
+                total_content_size += (cs := sum([zip_info.file_size for zip_info in ZipFile(fn).filelist]))
+                total_zip_size += (zs := stat(fn).st_size)
+                if print_result:
+                    print(f'{nice_size(cs, si)} {"from" if unbox else "into"} {nice_size(zs, si)} {fn}')
+            if unbox and delete and (py7za.return_code == 0):
                 os_remove(py7za.arguments[1])
             running.remove(py7za)
         done = True
 
-    await run_all()
+    if update_status:
+        await gather(run_all(), print_status())
+    else:
+        await run_all()
+
+    if cfg.output != 'q':
+        if update_status:
+            stdout.write('\r')
+        print(f'Completed processing {nice_size(total_content_size)} '
+              f'of files {"from" if unbox else "into"} {total} archives, totaling {nice_size(total_zip_size)}.')
 
 
 def print_help():
@@ -79,7 +124,10 @@ def print_help():
         '-r/--root <path>          : Path glob expression is relative to. ["."]\n'
         '-t/--target <path>        : Root path for output. ["" / in-place]\n'
         '-u/--unbox/--unzip        : Unzip instead of zip (glob to match archives).\n'
-        '-v/--verbose              : When provided, show every 7za command executed.\n'
+        '-o/--output [d/q/s/v]     : Default (a line per archive), quiet, status, or\n'
+        '                            verbose output. Verbose prints each 7za command.\n'
+        '                            Note: d/v may malfunction on some archive types.\n'
+        '-si                       : Whether to use SI units for file sizes. [False]\n'
         '-zs/--zip_structure [bool]: Root sub-folder structure is archived. [False]\n'
         '-7/--7za                  : CLI arguments passed to 7za after scripted ones.\n'
         '                            Add quotes if passing more than one argument.\n'
@@ -103,6 +151,8 @@ CLI_DEFAULTS = {
     'create_folders': True,
     'match_dir': False,
     'match_file': True,
+    'output': 'default',
+    'si': False,
     'root': '.',
     'unbox': False,
     'verbose': False,
@@ -114,7 +164,8 @@ CLI_DEFAULTS = {
 def cli_entry_point():
     cfg = Config.startup(defaults=CLI_DEFAULTS, aliases={
         'h': 'help', 'c': 'cores', 'cf': 'create_folders', 'md': 'match_dir', 'mf': 'match_file', 'u': 'unbox',
-        'unzip': 'unbox', 'r': 'root', 'zs': 'zip_structure', 't': 'target', 'v': 'verbose', '7': '7za', 'g': 'glob'
+        'unzip': 'unbox', 'r': 'root', 'zs': 'zip_structure', 't': 'target', 'v': 'verbose', '7': '7za', 'g': 'glob',
+        'o': 'output'
     })
 
     if cfg.get_as_type('help', bool, False):
@@ -137,7 +188,7 @@ def cli_entry_point():
         error(f'The provided target directory "{cfg.target}" was not found.')
         exit(2)
 
-    if cfg.unbox and cfg.create_folders and 'target' in cfg and not target is True:
+    if cfg.unbox and cfg.create_folders and 'target' in cfg and target is not True:
         warning(f'When unboxing to a target location (not in-place), original structure cannot be restored '
                 f'unless sub-folder from root were included when the archives were created.')
 
@@ -147,6 +198,18 @@ def cli_entry_point():
     if cfg.zip_structure and cfg.create_folders:
         warning(f'Keeping sub-folders from root in archives, as well creating the folder structure in the '
                 f'target location may produce unexpected results.')
+
+    output_modes = {
+        'd': 'd', 'default': 'd',
+        'q': 'q', 'quiet': 'q',
+        's': 's', 'status': 's',
+        'v': 'v', 'verbose': 'v'
+    }
+    if cfg.output not in output_modes:
+        error(f'Unknown output mode {cfg.output}, provide default(d), quiet(q), status(s) or verbose(v).')
+        print_help()
+        exit(1)
+    cfg.output = output_modes[cfg.output]
 
     run(box(cfg))
 
