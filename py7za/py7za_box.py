@@ -18,7 +18,9 @@ async def box(cfg):
     running = []
     aiop = AsyncIOPool(pool_size=cfg['cores'] if cfg['cores'] else available_cpu_count())
 
-    cli_options = '' if not cfg['delete'] or cfg['unbox'] else '-sdel '
+    cli_options = '-y '
+    cli_options += '-sdel ' if cfg['delete'] and not cfg['unbox'] else ''
+    cli_options += f'-ao{cfg.overwrite} ' if cfg['unbox'] else ''
     cli_options += cfg['7za'] if '7za' in cfg else ''
 
     print_result = cfg.output in 'vd'
@@ -76,7 +78,7 @@ async def box(cfg):
                     Py7za(f'a "{target_path}.zip" "{content}" {cli_options}', on_start=start, working_dir=wd))
             else:
                 target_path = target / sub_path if create_folders else target
-                zippers.append(Py7za(f'e "{root / sub_path / fn}" -o"{target_path}"', start))
+                zippers.append(Py7za(f'e "{root / sub_path / fn}" -o"{target_path}" {cli_options}', start))
         total = len(zippers)
         async for py7za in aiop.arun_many(zippers):
             if print_result or update_status:
@@ -128,6 +130,8 @@ def print_help():
         '                            verbose output. Verbose prints each 7za command.\n'
         '                            Note: d/v may malfunction on some archive types.\n'
         '-si                       : Whether to use SI units for file sizes. [False]\n'
+        '-w/overwrite [a/s/u/t]    : Used overwrite mode when unboxing. [s]\n'
+        '                            a:all, s:skip, u:rename new, t:rename existing.\n'
         '-zs/--zip_structure [bool]: Root sub-folder structure is archived. [False]\n'
         '-7/--7za                  : CLI arguments passed to 7za after scripted ones.\n'
         '                            Add quotes if passing more than one argument.\n'
@@ -152,6 +156,7 @@ CLI_DEFAULTS = {
     'match_dir': False,
     'match_file': True,
     'output': 'default',
+    'overwrite': 's',
     'si': False,
     'root': '.',
     'unbox': False,
@@ -165,7 +170,7 @@ def cli_entry_point():
     cfg = Config.startup(defaults=CLI_DEFAULTS, aliases={
         'h': 'help', 'c': 'cores', 'cf': 'create_folders', 'md': 'match_dir', 'mf': 'match_file', 'u': 'unbox',
         'unzip': 'unbox', 'r': 'root', 'zs': 'zip_structure', 't': 'target', 'v': 'verbose', '7': '7za', 'g': 'glob',
-        'o': 'output'
+        'o': 'output', 'w': 'overwrite'
     })
 
     if cfg.get_as_type('help', bool, False):
@@ -210,6 +215,20 @@ def cli_entry_point():
         print_help()
         exit(1)
     cfg.output = output_modes[cfg.output]
+
+    overwrite_modes = {
+        'a': 'a', 'all': 'a',
+        's': 's', 'skip': 's',
+        'u': 'u', 'rename_new': 'u',
+        't': 't', 'rename_existing': 't'
+    }
+    if cfg.overwrite not in overwrite_modes:
+        error(f'Unknown overwrite mode {cfg.output}, provide all(a), skip(s), rename_new(u) or rename_existing(t).')
+        print_help()
+        exit(1)
+    cfg.overwrite = overwrite_modes[cfg.overwrite]
+    if cfg.overwrite != 's' and not cfg.unbox:
+        warning(f'Overwrite mode {cfg.overwrite} passed, but option will have no effect unless unboxing.')
 
     run(box(cfg))
 

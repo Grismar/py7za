@@ -4,11 +4,16 @@
 
 No changes since last release.
 
-## [0.0.4] - 2021-10-23
+## [0.0.4] - 2021-10-24
 
 ### Added
   - `nice_size` for pretty-printing file sizes
-  - output modes default, verbose, status and quiet (previous default) 
+  - output modes default, verbose, status and quiet (previous default)
+  - overwrite modes all, skip (default), rename_new, rename_existing
+
+### Fixed
+  - passing `-y` as a default option, previously 7za could get stuck in interactive mode.
+  - passing cli options to 7za when unboxing, previously only passed scripted options, ignoring `-7 <options>`
 
 ## [0.0.3] - 2021-10-22
 
@@ -34,6 +39,7 @@ First release in the wild.
   - Cloned and adapted from python_package_template
 
 [Unreleased]: /../../../
+[0.0.4]: /../../../tags/0.0.3
 [0.0.3]: /../../../tags/0.0.3
 [0.0.2]: /../../../tags/0.0.2
 [0.0.1]: /../../../tags/0.0.1
