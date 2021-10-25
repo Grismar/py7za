@@ -43,7 +43,7 @@ setup(
         'Programming Language :: Python :: 3.8',
     ],
     extras_require={
-        'py7za-box': ['conffu']
+        'box': ['conffu']
     },
     python_requires='>=3.8',
     entry_points={

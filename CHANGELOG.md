@@ -4,6 +4,12 @@
 
 No changes since last release.
 
+## [0.0.5] - 2021-10-25
+
+### Fixed
+  - relative import of version (running script in development as package.module, instead of full script path name)
+  - (non-functional:) refactoring and suppression of irrelevant warnings
+
 ## [0.0.4] - 2021-10-24
 
 ### Added

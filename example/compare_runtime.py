@@ -5,8 +5,8 @@ from timeit import timeit
 from os import remove
 
 
-TEST_LOCATION = r'C:\0000\20210407\HN_Scenarios'
-FILES_TO_ZIP = '*.csv'
+TEST_LOCATION = r'../scripts'
+FILES_TO_ZIP = '*.bat'
 TARGET = 'output'
 
 

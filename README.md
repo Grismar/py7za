@@ -19,9 +19,15 @@ Install the package:
 pip install py7za
 ```
 
-Of if you want to use the command-line interface `py7za-box`, make sure the dependencies for it are installed: 
+Of if you want to use the command-line interface `py7za-box`, make sure the dependencies for it are installed like this: 
 ```commandline
-pip install py7za[py7za-box]
+pip install py7za[box]
+py7za-box --help
+```
+
+On Linux, you will have to have `p7zip` installed, as there is no Linux binary included in the package. For example:
+```commandline
+sudo yum install -y p7zip
 ```
 
 ## Example

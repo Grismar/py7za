@@ -32,10 +32,12 @@ def available_cpu_count():
 
     # https://github.com/giampaolo/psutil preferred fallback, if installed
     try:
+        # noinspection PyPackageRequirements,PyUnresolvedReferences
         from psutil import cpu_count
         return cpu_count()
     except ImportError:
         try:
+            # noinspection PyPackageRequirements,PyUnresolvedReferences
             from psutil import NUM_CPUS
             return NUM_CPUS
         except ImportError:
@@ -63,7 +65,9 @@ def available_cpu_count():
 
     # jython
     try:
+        # noinspection PyPackageRequirements,PyUnresolvedReferences
         from java.lang import Runtime
+
         runtime = Runtime.getRuntime()
         res = runtime.availableProcessors()
 

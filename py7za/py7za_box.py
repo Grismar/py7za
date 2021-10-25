@@ -105,7 +105,7 @@ async def box(cfg):
 
 
 def print_help():
-    from _version import __version__
+    from ._version import __version__
     print(
         '\npy7za-box '+__version__+', command line utility\n'
         '\nPy7za-box ("pizza box") replaces a set of files with individual .zip files\n'
@@ -144,7 +144,7 @@ def print_help():
         '   py7za-box *.csv --root C:/Data --target C:/Archive\n'
         'Unzip all .csv.zip from C:/Archive and sub-folders in-place:\n'
         '   py7za-box **/*.csv.zip --root C:/Archive --unbox -t C:/Data\n'
-        'Zip folders named `Photo*` individally using maximum compression:\n'
+        'Zip folders named `Photo*` individually using maximum compression:\n'
         '   py7za-box Photo* -r "C:/My Photos" -md -mf 0 -t C:/Archive -7 "-mx9"'
     )
 
