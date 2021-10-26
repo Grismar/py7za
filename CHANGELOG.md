@@ -4,22 +4,28 @@
 
 No changes since last release.
 
+## [0.0.6] - 2021-10-26
+
+### Fixed
+  - small mistakes in help text corrected;
+  - with `--output verbose`, py7za-box now correctly prints INFO lines with the full 7za command.
+
 ## [0.0.5] - 2021-10-25
 
 ### Fixed
-  - relative import of version (running script in development as package.module, instead of full script path name)
-  - (non-functional:) refactoring and suppression of irrelevant warnings
+  - relative import of version (running script in development as package.module, instead of full script path name);
+  - (non-functional:) refactoring and suppression of irrelevant warnings.
 
 ## [0.0.4] - 2021-10-24
 
 ### Added
-  - `nice_size` for pretty-printing file sizes
-  - output modes default, verbose, status and quiet (previous default)
-  - overwrite modes all, skip (default), rename_new, rename_existing
+  - `nice_size` for pretty-printing file sizes;
+  - output modes default, verbose, status and quiet (previous default);
+  - overwrite modes all, skip (default), rename_new, rename_existing.
 
 ### Fixed
-  - passing `-y` as a default option, previously 7za could get stuck in interactive mode.
-  - passing cli options to 7za when unboxing, previously only passed scripted options, ignoring `-7 <options>`
+  - passing `-y` as a default option, previously 7za could get stuck in interactive mode;
+  - passing cli options to 7za when unboxing, previously only passed scripted options, ignoring `-7 <options>`.
 
 ## [0.0.3] - 2021-10-22
 
@@ -33,19 +39,21 @@ First PyPI release.
 First release in the wild.
 
 ### Added
-  - Core Py7za class wrapping 7za.exe
-  - AsyncIOPool CPU pooling
-  - `py7za-box` CLI tool
-  - Use of pre-installed 7za on Linux
-  - Unit tests
+  - Core Py7za class wrapping 7za.exe;
+  - AsyncIOPool CPU pooling;
+  - `py7za-box` CLI tool;
+  - Use of pre-installed 7za on Linux;
+  - Unit tests.
 
 ## [0.0.1] - 2021-08-04
 
 ### Added
-  - Cloned and adapted from python_package_template
+  - Cloned and adapted from python_package_template.
 
 [Unreleased]: /../../../
-[0.0.4]: /../../../tags/0.0.3
+[0.0.4]: /../../../tags/0.0.6
+[0.0.4]: /../../../tags/0.0.5
+[0.0.4]: /../../../tags/0.0.4
 [0.0.3]: /../../../tags/0.0.3
 [0.0.2]: /../../../tags/0.0.2
 [0.0.1]: /../../../tags/0.0.1

@@ -85,7 +85,7 @@ class TestPy7zaBox(unittest.IsolatedAsyncioTestCase):
                 with open('data/source/sub/y.csv', 'rb') as f:
                     self.assertEqual(f.read(), fz.read(), 'zipped content in sub-folder is identical')
 
-    async def test_box_roundtrip(self):
+    async def test_box_round_trip(self):
         await box(Config(CLI_DEFAULTS | {'root': 'data/source', 'glob': '*.csv'}))
         self.assertFalse(Path('data/source/x.csv').is_file(), 'original is gone after box')
         self.assertTrue(Path('data/source/x.csv.zip').is_file(), 'archive exists after box')

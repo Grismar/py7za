@@ -1,6 +1,6 @@
 from sys import stdout
 from os import remove as os_remove, stat
-from logging import error, warning, info
+from logging import error, warning, info, basicConfig, INFO
 from conffu import Config
 from pathlib import Path
 from asyncio import run, sleep, gather
@@ -25,6 +25,8 @@ async def box(cfg):
 
     print_result = cfg.output in 'vd'
     info_command = cfg.output == 'v'
+    if info_command:
+        basicConfig(level=INFO, format='%(asctime)s %(levelname)s %(message)s')
     update_status = cfg.output == 's'
 
     unbox = cfg['unbox']
@@ -41,7 +43,7 @@ async def box(cfg):
     def start(py7za):
         nonlocal running, current, info_command
         if info_command:
-            info(f'In {py7za.working_dir}: '.join([py7za.executable_7za, *py7za.arguments]))
+            info(f'"{py7za.working_dir}": '+' '.join([py7za.executable_7za, *py7za.arguments]))
         current += 1
         running.append(py7za)
 
@@ -118,7 +120,7 @@ def print_help():
         '                            Add quotes if your expression contains spaces.\n'
         'Options:\n'
         '-h/--help                 : This text.\n'
-        '-c/--cores <n>            : Try to use specific number of cores. [0 / all]\n'
+        '-c/--cores <n>            : Try to use specific number of cores. [0 = all]\n'
         '-d/--delete               : Remove the source after (un)boxing. [True]\n'
         '-cf/--create_folders      : Recreate folder structure in target path. [True]\n'
         '-md/--match_dir [bool]    : Glob expression should match dirs. [False]\n'
@@ -136,8 +138,6 @@ def print_help():
         '-7/--7za                  : CLI arguments passed to 7za after scripted ones.\n'
         '                            Add quotes if passing more than one argument.\n'
         '\n'
-        'Unmatched options will be passed to 7za on the command line.\n'
-        '\n'
         'Examples:\n'
         '\n'
         'Zip all .csv files in C:/Data and put the archives in C:/Temp:\n'
@@ -145,7 +145,7 @@ def print_help():
         'Unzip all .csv.zip from C:/Archive and sub-folders in-place:\n'
         '   py7za-box **/*.csv.zip --root C:/Archive --unbox -t C:/Data\n'
         'Zip folders named `Photo*` individually using maximum compression:\n'
-        '   py7za-box Photo* -r "C:/My Photos" -md -mf 0 -t C:/Archive -7 "-mx9"'
+        '   py7za-box Photo* -r "C:/My Photos" -md -mf 0 -t C:/Archive -7 "-mx9"\n\n'
     )
 
 

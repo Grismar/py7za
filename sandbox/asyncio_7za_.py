@@ -1,4 +1,4 @@
-from asyncio import create_subprocess_exec, Queue, QueueEmpty, create_task, run, gather, sleep
+from asyncio import create_subprocess_exec, Queue, QueueEmpty, create_task, run, gather
 from asyncio.subprocess import PIPE
 
 

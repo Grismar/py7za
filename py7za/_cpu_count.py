@@ -80,8 +80,8 @@ def available_cpu_count():
     try:
         sysctl = Popen(['sysctl', '-n', 'hw.ncpu'],
                        stdout=PIPE)
-        scStdout = sysctl.communicate()[0]
-        res = int(scStdout)
+        sc_stdout = sysctl.communicate()[0]
+        res = int(sc_stdout)
 
         if res > 0:
             return res
@@ -100,9 +100,9 @@ def available_cpu_count():
 
     # Solaris
     try:
-        pseudoDevices = listdir('/devices/pseudo/')
+        pseudo_devices = listdir('/devices/pseudo/')
         res = 0
-        for pd in pseudoDevices:
+        for pd in pseudo_devices:
             if match(r'^cpuid@[0-9]+$', pd):
                 res += 1
 
@@ -117,8 +117,8 @@ def available_cpu_count():
             with open('/var/run/dmesg.boot') as f:
                 dmesg = f.read()
         except IOError:
-            dmesgProcess = Popen(['dmesg'], stdout=PIPE)
-            dmesg = dmesgProcess.communicate()[0]
+            dmesg_process = Popen(['dmesg'], stdout=PIPE)
+            dmesg = dmesg_process.communicate()[0]
 
         res = 0
         while '\ncpu' + str(res) + ':' in dmesg:

@@ -1,7 +1,7 @@
 def nice_size(size, si=False, decimal_precision=1):
     threshold = 1000 if si else 1024
 
-    if (abs(size) < threshold):
+    if abs(size) < threshold:
         return f'{size} B'
 
     units = ['kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'] if si \

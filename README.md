@@ -64,12 +64,17 @@ To quickly replace every .csv file in a folder and all its sub-folders with a zi
 py7za-box **/*.csv
 ```
 
-A more elaborate example:
+And the reverse:
 ```commandline
-py7za-box **/*.csv --root c:/temp --folders --verbose -7 "-mx=9" 
+py7za-box **/*.csv.zip --unbox
 ```
 
-This would run `py7za-box` with `c:/temp` as the working directory, matching all .csv files in it and its sub-folders, printing the command line for each execution of 7za as it happens. The `--folders` ensures that the sub-folder structure relative to `c:/temp` is preserved in the archives.
+A more elaborate example:
+```commandline
+py7za-box **/*.csv --root c:/temp --folders --verbose -7 "-mx=9 -psecret" 
+```
+
+This would run `py7za-box` with `c:/temp` as the working directory, matching all .csv files in it and its sub-folders, printing the command line for each execution of 7za as it happens. The `--folders` ensures that the sub-folder structure relative to `c:/temp` is preserved in the archives. The extra options passed to 7za ensure maximum compression and set a password on the archive.
 
 ### Structure and Folders
 
