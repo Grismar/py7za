@@ -4,6 +4,15 @@
 
 No changes since last release.
 
+## [0.0.7] - 2021-10-28
+
+### Added
+  - support for multiple glob expressions, e.g. `py7za-box *.txt *.csv`
+
+### Fixed
+  - outdated and broken examples in help text corrected;
+  - (major) extracting with 'x' instead of 'e' (previously, zipped directories would incorrectly extract)
+
 ## [0.0.6] - 2021-10-26
 
 ### Fixed
@@ -51,8 +60,9 @@ First release in the wild.
   - Cloned and adapted from python_package_template.
 
 [Unreleased]: /../../../
-[0.0.4]: /../../../tags/0.0.6
-[0.0.4]: /../../../tags/0.0.5
+[0.0.7]: /../../../tags/0.0.7
+[0.0.6]: /../../../tags/0.0.6
+[0.0.5]: /../../../tags/0.0.5
 [0.0.4]: /../../../tags/0.0.4
 [0.0.3]: /../../../tags/0.0.3
 [0.0.2]: /../../../tags/0.0.2

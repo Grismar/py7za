@@ -36,9 +36,12 @@ async def box(cfg):
     si = cfg['si']
 
     def globber(root, glob_expr):
-        for fn in Path(root).glob(glob_expr):
-            if (fn.is_dir() and cfg['match_dir']) or (fn.is_file() and cfg['match_file']):
-                yield fn.relative_to(root).parent, fn.name
+        if not isinstance(glob_expr, list):
+            glob_expr = [glob_expr]
+        for ge in glob_expr:
+            for fn in Path(root).glob(ge):
+                if (fn.is_dir() and cfg['match_dir']) or (fn.is_file() and cfg['match_file']):
+                    yield fn.relative_to(root).parent, fn.name
 
     def start(py7za):
         nonlocal running, current, info_command
@@ -80,7 +83,7 @@ async def box(cfg):
                     Py7za(f'a "{target_path}.zip" "{content}" {cli_options}', on_start=start, working_dir=wd))
             else:
                 target_path = target / sub_path if create_folders else target
-                zippers.append(Py7za(f'e "{root / sub_path / fn}" -o"{target_path}" {cli_options}', start))
+                zippers.append(Py7za(f'x "{root / sub_path / fn}" -o"{target_path}" {cli_options}', start))
         total = len(zippers)
         async for py7za in aiop.arun_many(zippers):
             if print_result or update_status:
@@ -114,18 +117,18 @@ def print_help():
         'containing the originals, or does the reverse by "unboxing" the archives.\n'
         'Py7za uses 7za.exe, more information on the project page.'
         '\n'
-        'Use: `py7za-box <glob expression> [options] [7za options]\n'
+        'Use: `py7za-box <glob expression(s)> [options] [7za options]\n'
         '\n'
-        '<glob expression>         : A glob expression like "**/*.csv". (required)\n'
+        '<glob expression(s)>      : Glob expression(s) like "**/*.csv". (required)\n'
         '                            Add quotes if your expression contains spaces.\n'
         'Options:\n'
         '-h/--help                 : This text.\n'
         '-c/--cores <n>            : Try to use specific number of cores. [0 = all]\n'
         '-d/--delete               : Remove the source after (un)boxing. [True]\n'
         '-cf/--create_folders      : Recreate folder structure in target path. [True]\n'
-        '-md/--match_dir [bool]    : Glob expression should match dirs. [False]\n'
-        '-mf/--match_file [bool]   : Glob expression should match files. [True]\n'
-        '-r/--root <path>          : Path glob expression is relative to. ["."]\n'
+        '-md/--match_dir [bool]    : Glob expression(s) should match dirs. [False]\n'
+        '-mf/--match_file [bool]   : Glob expression(s) should match files. [True]\n'
+        '-r/--root <path>          : Path glob expression(s) are relative to. ["."]\n'
         '-t/--target <path>        : Root path for output. ["" / in-place]\n'
         '-u/--unbox/--unzip        : Unzip instead of zip (glob to match archives).\n'
         '-o/--output [d/q/s/v]     : Default (a line per archive), quiet, status, or\n'
@@ -140,10 +143,10 @@ def print_help():
         '\n'
         'Examples:\n'
         '\n'
-        'Zip all .csv files in C:/Data and put the archives in C:/Temp:\n'
+        'Zip all .csv files in C:/Data and put the archives in C:/Archive:\n'
         '   py7za-box *.csv --root C:/Data --target C:/Archive\n'
-        'Unzip all .csv.zip from C:/Archive and sub-folders in-place:\n'
-        '   py7za-box **/*.csv.zip --root C:/Archive --unbox -t C:/Data\n'
+        'Unzip all .csv.zip from C:/Archive and sub-folders to C:/Data:\n'
+        '   py7za-box **/*.csv.zip --unbox --root C:/Archive -t C:/Data\n'
         'Zip folders named `Photo*` individually using maximum compression:\n'
         '   py7za-box Photo* -r "C:/My Photos" -md -mf 0 -t C:/Archive -7 "-mx9"\n\n'
     )
@@ -177,12 +180,12 @@ def cli_entry_point():
         print_help()
         exit(0)
 
-    if len(cfg.arguments['']) != 2 and 'glob' not in cfg:
-        error('Missing required single argument glob expression, e.g. `py7za-box *.csv [options]`.')
+    if len(cfg.arguments['']) < 2 and 'glob' not in cfg:
+        error('Missing required argument glob expression(s), e.g. `py7za-box *.csv [options]`.')
         print_help()
         exit(1)
     else:
-        cfg.glob = cfg.glob if 'glob' in cfg else cfg.arguments[''][1]
+        cfg.glob = cfg.glob if 'glob' in cfg else cfg.parameters
 
     if not Path(cfg.root).is_dir():
         error(f'The provided root directory "{cfg.root}" was not found.')

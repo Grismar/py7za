@@ -6,16 +6,20 @@ from conffu import Config
 from zipfile import ZipFile
 from os import chdir, getcwd
 
-chdir(Path(__file__).parent)
 CLI_DEFAULTS['output'] = 'q'
 
 
 class TestPy7zaBox(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
+        # ensure working dir is directory of test script
+        chdir(Path(__file__).parent)
         test = Path('.')
         rmtree(test / 'data')
-        (test / 'data/source/sub').mkdir(parents=True, exist_ok=True)
+        (test / 'data/source/sub/subsub').mkdir(parents=True, exist_ok=True)
+        (test / 'data/source/sub2/').mkdir(parents=True, exist_ok=True)
+        (test / 'data/source/sub3/').mkdir(parents=True, exist_ok=True)
         (test / 'data/target').mkdir(parents=True, exist_ok=True)
+        (test / 'data/extra').mkdir(parents=True, exist_ok=True)
         with open('data/.gitignore', 'w') as f:
             f.write('*\n!.gitignore')
         with open('data/source/x.csv', 'w') as f:
@@ -24,6 +28,15 @@ class TestPy7zaBox(unittest.IsolatedAsyncioTestCase):
             f.write('Testing, 1, 2, 3')
         with open('data/source/sub/y.csv', 'w') as f:
             f.write('X,Y,Z\n0,0,0\n')
+        with open('data/source/sub2/y2.csv', 'w') as f:
+            f.write('X,Y,Z\n0,0,0\n')
+        with open('data/source/sub3/y3.csv', 'w') as f:
+            f.write('X,Y,Z\n0,0,0\n')
+        # file easily mistaken for a folder
+        with open('data/source/sub4', 'w') as f:
+            f.write('X,Y,Z\n0,0,0\n')
+        with open('data/source/sub/subsub/z.csv', 'w') as f:
+            f.write('0,0,0\n')
         with open('data/source/sub/hello.txt', 'w') as f:
             f.write('Hello\nWorld\n')
 
@@ -148,3 +161,91 @@ class TestPy7zaBox(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(Path('data/source/x_1.csv').is_file(), 'existing file was renamed')
         with open('data/source/x_1.csv') as f:
             self.assertEqual(new_content, f.read(), 'Existing files still contains new content')
+
+    async def test_box_dir_default(self):
+        await box(Config(CLI_DEFAULTS | {'glob': '**/*.csv'}))
+        self.assertTrue(Path('data/source/x.csv.zip').is_file(), 'archive in-place default')
+        self.assertTrue(Path('data/source/sub/y.csv.zip').is_file(), 'archive subs in-place default')
+
+    async def test_box_dir_root(self):
+        await box(Config(CLI_DEFAULTS | {'root': 'data/source/sub', 'glob': '**/*.csv'}))
+        self.assertFalse(Path('data/source/x.csv.zip').is_file(), 'no archive in root parent')
+        self.assertTrue(Path('data/source/sub/y.csv.zip').is_file(), 'archive subs in-place from root')
+
+    async def test_box_dir_target(self):
+        await box(Config(CLI_DEFAULTS | {'glob': '**/*.csv', 'target': 'data/target'}))
+        self.assertTrue(Path('data/target/data/source/x.csv.zip').is_file(),
+                        'archive in target, relative to working')
+        self.assertTrue(Path('data/target/data/source/sub/y.csv.zip').is_file(),
+                        'archive subs in target, relative to working')
+        self.assertTrue(Path('data/target/data/source/sub/subsub/z.csv.zip').is_file(),
+                        'archive sub-subs in target, relative to working')
+
+    async def test_box_dir_target_root(self):
+        await box(Config(CLI_DEFAULTS | {'glob': '**/*.csv', 'target': 'data/target', 'root': 'data/source'}))
+        self.assertTrue(Path('data/target/x.csv.zip').is_file(),
+                        'archive in target, relative to root')
+        self.assertTrue(Path('data/target/sub/y.csv.zip').is_file(),
+                        'archive subs in target, relative to root')
+        self.assertTrue(Path('data/target/sub/subsub/z.csv.zip').is_file(),
+                        'archive sub-subs in target, relative to root')
+
+    async def test_box_dirs_no_match(self):
+        await box(Config(CLI_DEFAULTS | {'glob': 'sub?', 'root': 'data/source'}))
+        self.assertFalse(Path('data/source/sub2.zip').is_file(),
+                        'no zipped subdirectory without --match_dir')
+
+    async def test_box_dirs_match(self):
+        await box(Config(CLI_DEFAULTS | {'glob': 'sub?', 'root': 'data/source', 'match_dir': True}))
+        self.assertTrue(Path('data/source/sub2.zip').is_file(),
+                        'zipped subdirectory in-place')
+        self.assertFalse(Path('data/source/sub2').is_dir(),
+                         'zipped subdirectory original removed')
+        self.assertTrue(Path('data/source/sub3.zip').is_file(),
+                        '2nd zipped subdirectory in-place')
+        await box(Config(CLI_DEFAULTS | {'glob': 'sub?.zip', 'root': 'data/source', 'unbox': True}))
+        self.assertTrue(Path('data/source/sub2').is_dir(),
+                       'zipped subdirectory restored')
+        self.assertTrue(Path('data/source/sub2/y2.csv').is_file(),
+                       'zipped subdirectory contents restored')
+        self.assertFalse(Path('data/source/sub2.zip').is_file(),
+                         'restored sub directory archive removed')
+        self.assertTrue(Path('data/source/sub3').is_dir(),
+                       'zipped subdirectory restored')
+
+    async def test_box_dirs_subdirs(self):
+        with open('data/source/sub/subsub/z.csv', 'rb') as f:
+            content = f.read()
+        await box(Config(CLI_DEFAULTS | {'glob': 'sub', 'root': 'data/source', 'match_dir': True}))
+        self.assertTrue(Path('data/source/sub.zip').is_file(),
+                        'archive exists')
+        with ZipFile('data/source/sub.zip') as zf:
+            with zf.open('sub/subsub/z.csv', 'r') as f:
+                self.assertEqual(content, f.read(), 'zipped content contains files in subdirs')
+
+    async def test_box_dirs_match_files(self):
+        await box(Config(CLI_DEFAULTS | {'glob': '**/sub?', 'match_dir': True, 'match_file': True}))
+        self.assertTrue(Path('data/source/sub3.zip').is_file(),
+                        'zipped subdirectories in-place')
+        self.assertTrue(Path('data/source/sub4.zip').is_file(),
+                        'zipped files in-place')
+        await box(Config(CLI_DEFAULTS | {'glob': 'sub?.zip', 'root': 'data/source', 'unbox': True}))
+        self.assertTrue(Path('data/source/sub3').is_dir(),
+                       'zipped subdirectory restored')
+        self.assertTrue(Path('data/source/sub3/y3.csv').is_file(),
+                       'zipped subdirectory contents restored')
+        self.assertTrue(Path('data/source/sub4').is_file(),
+                       'zipped files restored')
+        self.setUp()
+        await box(Config(CLI_DEFAULTS | {'glob': '**/sub?', 'match_dir': True, 'match_file': False}))
+        self.assertTrue(Path('data/source/sub3.zip').is_file(),
+                        'zipped subdirectories in-place')
+        self.assertFalse(Path('data/source/sub4.zip').is_file(),
+                         'no files matched and zipped')
+
+    async def test_box_multi_glob(self):
+        await box(Config(CLI_DEFAULTS) | {'glob': ['**/*.csv', '**/*.txt']})
+        self.assertTrue(Path('data/source/sub/test.txt.zip').is_file(),
+                       'txt files matched in multi-glob')
+        self.assertTrue(Path('data/source/sub/y.csv.zip').is_file(),
+                       'txt files matched in multi-glob')
