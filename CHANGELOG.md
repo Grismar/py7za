@@ -4,6 +4,15 @@
 
 No changes since last release.
 
+## [0.0.8] - 2021-11-01
+
+### Added
+  - default now prints status underneath list, and `list` output mode only lists completed results (as default previously did)
+  - comments on several functions and classes
+
+### Fixed
+  - ANSI codes for clearing a line when updating status
+
 ## [0.0.7] - 2021-10-28
 
 ### Added
@@ -60,6 +69,7 @@ First release in the wild.
   - Cloned and adapted from python_package_template.
 
 [Unreleased]: /../../../
+[0.0.8]: /../../../tags/0.0.8
 [0.0.7]: /../../../tags/0.0.7
 [0.0.6]: /../../../tags/0.0.6
 [0.0.5]: /../../../tags/0.0.5

@@ -4,6 +4,10 @@ from asyncio import wait, FIRST_COMPLETED, Queue
 
 class AsyncIOPool:
     def __init__(self, pool_size: int):
+        """
+        AsyncIOPool manages a queue of awaitables, starting
+        :param pool_size:
+        """
         self._size = 1
         # assign through setter
         self.size = pool_size
@@ -21,6 +25,11 @@ class AsyncIOPool:
         self._size = value
 
     async def enqueue(self, aws: Union[Awaitable, Iterable[Awaitable]]):
+        """
+        Add one or more awaitables to the queue of awaitable run by arun_many; more can be added while it is running
+        :param aws: a single awaitable, or an iterable of awaitables to run
+        :return: None
+        """
         if not isinstance(aws, Iterable):
             aws = [aws]
         for aw in aws:
@@ -30,6 +39,7 @@ class AsyncIOPool:
             -> Generator[Any, None, None]:
         """
         Run as many tasks as size allows in parallel, starting new ones when previous ones complete
+        :param aws: a single awaitable, or an iterable of awaitables to run
         :return: a generator that yields result() from tasks as they complete
         """
         if aws is not None:

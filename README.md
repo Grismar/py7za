@@ -14,20 +14,21 @@ Finally, a command line utility `py7za-box` is included, which allows you to qui
 
 ## Install
 
-Install the package:
+Install the package for use from scripts:
 ```commandline
 pip install py7za
 ```
 
-Of if you want to use the command-line interface `py7za-box`, make sure the dependencies for it are installed like this: 
+Of if you want to use the command-line interface `py7za-box` as well, make sure the dependencies for it are installed like this: 
 ```commandline
 pip install py7za[box]
 py7za-box --help
 ```
 
-On Linux, you will have to have `p7zip` installed, as there is no Linux binary included in the package. For example:
+On Linux, you will have to have `p7zip` installed for `py7za` to work, as there is no Linux binary included in the package. For example:
 ```commandline
 sudo yum install -y p7zip
+sudo apt-get install -y p7zip
 ```
 
 ## Example
@@ -55,11 +56,11 @@ run(zip_many('c:/documents', '*.bak', target='c:/temp'))
 ```
 This function would find a bunch of files and create zip files for each in another location, with 4 copies of 7za running at any time, until it's done.
 
-Note: 7za supports multicore compression when compressing multiple files into a single archive. So if you're compressing many files into a few archives, it may not be optimal to create a pool with as many tasks as you have cores.
+Note: 7za itself supports multicore compression when compressing multiple files into a single archive. So if you're compressing many files into a few archives, it may not be optimal to create a pool with as many tasks as you have cores.
 
 ### Command line py7za-box
 
-To quickly replace every .csv file in a folder and all its sub-folders with a zip-file containing that .csv:
+To quickly replace every .csv file in a folder and in all its sub-folders with a zip-file containing that .csv:
 ```commandline
 py7za-box **/*.csv
 ```
@@ -71,10 +72,10 @@ py7za-box **/*.csv.zip --unbox
 
 A more elaborate example:
 ```commandline
-py7za-box **/*.csv **/*.txt --root c:/temp --folders --verbose -7 "-mx=9 -psecret" 
+py7za-box **/*.csv **/*.txt --root c:/temp --folders --output verbose -7 "-mx=9 -psecret" 
 ```
 
-This would run `py7za-box` with `c:/temp` as the working directory, matching all .csv and .txt files in it and its sub-folders, printing the command line for each execution of 7za as it happens. The `--folders` ensures that the sub-folder structure relative to `c:/temp` is preserved in the archives. The extra options passed to 7za ensure maximum compression and set a password on the archive.
+This would run `py7za-box` with `c:/temp` as the working directory (`--root c:/temp`), matching all .csv and .txt files in it and in its sub-folders (`**/*.csv **/*.txt`), printing the command line for each execution of 7za as it happens (`--output verbose`). Ensure that the sub-folder structure relative to `c:/temp` is preserved in the archives (`--folders`). Pass options to 7za (`-7 "-mx=9 -psecret"`) to ensure maximum compression (`-mx=9`) and set a password on the archive (`-psecret`, i.e. password will be 'secret').
 
 ### Structure and Folders
 
@@ -100,7 +101,7 @@ Also note that `py7za-box **/*.csv --structure 0 --folders 1 --target output` is
 
 ## Dependencies
 
-The only external dependency is on `conffu` for the configuration of the command-line tool. If you only want to use the Py7za class, and just use `pip install py7za`, this dependency won't be installed. 
+The only external dependency is on `conffu` for the configuration of the command-line tool. If you only want to use the Py7za class, and just use `pip install py7za`, this dependency won't be installed. To install the dependency, use `pip install py7za[box]`.
 
 ## License
 

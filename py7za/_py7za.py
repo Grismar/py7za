@@ -27,6 +27,12 @@ class Py7za:
     executable_7za = str(Path(__file__).parent / 'bin/7za.exe') if os_name == 'nt' else '7za'
 
     def __init__(self, arguments: Union[str, List[str]], on_start: Callable = None, working_dir: str = '.'):
+        """
+        Creates an (awaitable) object ready to run 7za with given arguments
+        :param arguments: arguments to pass to 7za, after processing (always pass progress and output>1, disable log)
+        :param on_start: callback to be called just before starting a 7za subprocess is started
+        :param working_dir: working directory for 7za subprocesses
+        """
         if which(self.executable_7za) is None:
             raise FileNotFoundError(f'7za executable "{self.executable_7za}" not found.')
 

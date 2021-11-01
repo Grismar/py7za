@@ -1,4 +1,13 @@
 def nice_size(size, si=False, decimal_precision=1):
+    """
+    Returns a string representation of a file size in SI (KiB, MiB, etc.)
+    or binary units (KB, MB, etc.)
+    :param size: a size in single bytes
+    :param si: whether to use SI units (or binary units, the default)
+    :param decimal_precision: the number of decimals to show in rounded
+        representations
+    :return: a string representation of size
+    """
     threshold = 1000 if si else 1024
 
     if abs(size) < threshold:

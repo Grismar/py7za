@@ -23,11 +23,12 @@ async def box(cfg):
     cli_options += f'-ao{cfg.overwrite} ' if cfg['unbox'] else ''
     cli_options += cfg['7za'] if '7za' in cfg else ''
 
-    print_result = cfg.output in 'vd'
+    print_result = cfg.output in 'dlv'
     info_command = cfg.output == 'v'
     if info_command:
         basicConfig(level=INFO, format='%(asctime)s %(levelname)s %(message)s')
     update_status = cfg.output == 's'
+    list_status = cfg.output == 'd'
 
     unbox = cfg['unbox']
     delete = cfg['delete']
@@ -54,10 +55,12 @@ async def box(cfg):
         nonlocal done, running, current, total
         while True:
             if total == 0:
-                stdout.write(f'\rStarting ... ')
+                stdout.write(f'\x1b[2K\rStarting ... ')
             else:
-                stdout.write(f'\rProcessing: {current}/{total} ... '
+                stdout.write(f'\x1b[2K\rProcessing: {current} [{nice_size(total_content_size, si)}] '
+                             f'/ {total} [{nice_size(total_zip_size, si)}] ... '
                              f'{" ".join([f"{str(py7za.progress)}/100%" for py7za in running if py7za.progress])}')
+            stdout.flush()
             if done:
                 return
             await sleep(0.5)
@@ -91,7 +94,14 @@ async def box(cfg):
                 total_content_size += (cs := sum([zip_info.file_size for zip_info in ZipFile(fn).filelist]))
                 total_zip_size += (zs := stat(fn).st_size)
                 if print_result:
-                    print(f'{nice_size(cs, si)} {"from" if unbox else "into"} {nice_size(zs, si)} {fn}')
+                    if list_status:
+                        stdout.write(f'\x1b[2K\r'
+                                     f'{nice_size(cs, si)} {"from" if unbox else "into"} {nice_size(zs, si)} {fn}\n')
+                        stdout.write(f'Total: {current} [{nice_size(total_content_size, si)}] '
+                                     f'/ {total} [{nice_size(total_zip_size, si)}]')
+                    else:
+                        stdout.write(f'{nice_size(cs, si)} {"from" if unbox else "into"} {nice_size(zs, si)} {fn}\n')
+                    stdout.flush()
             if unbox and delete and (py7za.return_code == 0):
                 os_remove(py7za.arguments[1])
             running.remove(py7za)
@@ -103,8 +113,8 @@ async def box(cfg):
         await run_all()
 
     if cfg.output != 'q':
-        if update_status:
-            stdout.write('\r')
+        if update_status or print_result:
+            stdout.write('\x1b[2K\r')
         print(f'Completed processing {nice_size(total_content_size)} '
               f'of files {"from" if unbox else "into"} {total} archives, totaling {nice_size(total_zip_size)}.')
 
@@ -131,9 +141,10 @@ def print_help():
         '-r/--root <path>          : Path glob expression(s) are relative to. ["."]\n'
         '-t/--target <path>        : Root path for output. ["" / in-place]\n'
         '-u/--unbox/--unzip        : Unzip instead of zip (glob to match archives).\n'
-        '-o/--output [d/q/s/v]     : Default (a line per archive), quiet, status, or\n'
-        '                            verbose output. Verbose prints each 7za command.\n'
-        '                            Note: d/v may malfunction on some archive types.\n'
+        '-o/--output [d/l/q/s/v]   : Default (a line per archive with status), list,\n'
+        '                            quiet, status, or verbose output. Verbose prints\n'
+        '                            each full 7za command.\n'
+        '                            Note: d/l/v does not work for all archive types.\n'
         '-si                       : Whether to use SI units for file sizes. [False]\n'
         '-w/overwrite [a/s/u/t]    : Used overwrite mode when unboxing. [s]\n'
         '                            a:all, s:skip, u:rename new, t:rename existing.\n'
@@ -209,12 +220,17 @@ def cli_entry_point():
 
     output_modes = {
         'd': 'd', 'default': 'd',
+        'l': 'l', 'list': 'l',
         'q': 'q', 'quiet': 'q',
         's': 's', 'status': 's',
         'v': 'v', 'verbose': 'v'
     }
+    if cfg.verbose:
+        if 'output' in cfg.arguments:
+            warning(f'Setting --verbose to True overrides any --output options with \'verbose\'.')
+        cfg.output = 'v'
     if cfg.output not in output_modes:
-        error(f'Unknown output mode {cfg.output}, provide default(d), quiet(q), status(s) or verbose(v).')
+        error(f'Unknown output mode {cfg.output}, provide default(d), list(l), quiet(q), status(s) or verbose(v).')
         print_help()
         exit(1)
     cfg.output = output_modes[cfg.output]
