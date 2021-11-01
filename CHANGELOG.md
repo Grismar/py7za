@@ -4,6 +4,9 @@
 
 No changes since last release.
 
+### Fixed
+  - help text formatting
+
 ## [0.0.8] - 2021-11-01
 
 ### Added
