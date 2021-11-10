@@ -4,8 +4,11 @@
 
 No changes since last release.
 
+## [0.1.1] - 2021-11-10
+
 ### Fixed
   - help text formatting
+  - refactoring errors, invalidating 0.1.0
 
 ## [0.1.0] - 2021-11-10
 
@@ -82,6 +85,7 @@ First release in the wild.
   - Cloned and adapted from python_package_template.
 
 [Unreleased]: /../../../
+[0.1.1]: /../../../tags/0.1.1
 [0.1.0]: /../../../tags/0.1.0
 [0.0.8]: /../../../tags/0.0.8
 [0.0.7]: /../../../tags/0.0.7

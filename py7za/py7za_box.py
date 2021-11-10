@@ -152,7 +152,7 @@ def print_help():
         '-r/--root <path>          : Path glob expression(s) are relative to. ["."]\n'
         '-t/--target <path>        : Root path for output. ["" / in-place]\n'
         '-u/--unbox/--unzip        : Unzip instead of zip (glob to match archives).\n'
-        '-um/unbox_multi           : Whether to unzip multi-file archives. [False]\n'
+        '-um/--unbox_multi         : Whether to unzip multi-file archives. [False]\n'
         '-o/--output [d/l/q/s/v]   : Default (a line per archive with status), list,\n'
         '                            quiet, status, or verbose output. Verbose prints\n'
         '                            each full 7za command.\n'
@@ -199,7 +199,7 @@ def cli_entry_point():
     cfg = Config.startup(defaults=CLI_DEFAULTS, aliases={
         'h': 'help', 'c': 'cores', 'cf': 'create_folders', 'md': 'match_dir', 'mf': 'match_file', 'u': 'unbox',
         'unzip': 'unbox', 'r': 'root', 'zs': 'zip_structure', 't': 'target', 'v': 'verbose', '7': '7za', 'g': 'glob',
-        'o': 'output', 'w': 'overwrite', 'zz': 'zip_zips', 'um': 'unbox_multi'
+        'o': 'output', 'w': 'overwrite', 'za': 'zip_archives', 'um': 'unbox_multi'
     })
 
     if cfg.get_as_type('help', bool, False):
@@ -229,8 +229,8 @@ def cli_entry_point():
     if cfg.zip_structure and cfg.unbox:
         warning(f'The --zip_structure option was specified, but does nothing when unboxing and will be ignored.')
 
-    if cfg.zip_zips and cfg.unbox:
-        warning(f'The --zip_zips option was specified, but does nothing when unboxing and will be ignored.')
+    if cfg.zip_archives and cfg.unbox:
+        warning(f'The --zip_archives option was specified, but does nothing when unboxing and will be ignored.')
 
     if cfg.unbox_multi and not cfg.unbox:
         warning(f'The --unbox_multi option was specified, but does nothing unless unboxing and will be ignored.')
