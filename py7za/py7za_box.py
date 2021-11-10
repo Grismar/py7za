@@ -8,6 +8,8 @@ from py7za import Py7za, AsyncIOPool, available_cpu_count, nice_size
 # only used for status
 from zipfile import ZipFile
 
+ARCHIVE_SUFFIXES = ['.zip', '.zipx', '.gz', '.7z', '.s7z', '.lzma', '.lz', '.cab', '.jar', '.war', '.rar']
+
 
 async def box(cfg):
     total = 0
@@ -31,9 +33,11 @@ async def box(cfg):
     list_status = cfg.output == 'd'
 
     unbox = cfg['unbox']
+    unbox_multi = cfg['unbox_multi']
     delete = cfg['delete']
     create_folders = cfg['create_folders']
     zip_structure = cfg['zip_structure']
+    zip_archives = cfg['zip_archives']
     si = cfg['si']
 
     def globber(root, glob_expr):
@@ -41,6 +45,9 @@ async def box(cfg):
             glob_expr = [glob_expr]
         for ge in glob_expr:
             for fn in Path(root).glob(ge):
+                if not unbox and not zip_archives and fn.suffix in ARCHIVE_SUFFIXES:
+                    info(f'Skipping {fn} as it is an archive and --zip_archives was not specified.')
+                    continue
                 if (fn.is_dir() and cfg['match_dir']) or (fn.is_file() and cfg['match_file']):
                     yield fn.relative_to(root).parent, fn.name
 
@@ -85,8 +92,12 @@ async def box(cfg):
                 zippers.append(
                     Py7za(f'a "{target_path}.zip" "{content}" {cli_options}', on_start=start, working_dir=wd))
             else:
+                archive = root / sub_path / fn
+                if not unbox_multi and len(ZipFile(archive).filelist) > 1:
+                    info(f'Skipping {archive} as it has multiple files and --unbox_multi was not specified.')
+                    continue
                 target_path = target / sub_path if create_folders else target
-                zippers.append(Py7za(f'x "{root / sub_path / fn}" -o"{target_path}" {cli_options}', start))
+                zippers.append(Py7za(f'x "{archive}" -o"{target_path}" {cli_options}', start))
         total = len(zippers)
         async for py7za in aiop.arun_many(zippers):
             if print_result or update_status:
@@ -141,6 +152,7 @@ def print_help():
         '-r/--root <path>          : Path glob expression(s) are relative to. ["."]\n'
         '-t/--target <path>        : Root path for output. ["" / in-place]\n'
         '-u/--unbox/--unzip        : Unzip instead of zip (glob to match archives).\n'
+        '-um/unbox_multi           : Whether to unzip multi-file archives. [False]\n'
         '-o/--output [d/l/q/s/v]   : Default (a line per archive with status), list,\n'
         '                            quiet, status, or verbose output. Verbose prints\n'
         '                            each full 7za command.\n'
@@ -148,6 +160,7 @@ def print_help():
         '-si                       : Whether to use SI units for file sizes. [False]\n'
         '-w/overwrite [a/s/u/t]    : Used overwrite mode when unboxing. [s]\n'
         '                            a:all, s:skip, u:rename new, t:rename existing.\n'
+        '-za/--zip_archives [bool] : Whether to zip matched archives (again). [False]\n'
         '-zs/--zip_structure [bool]: Root sub-folder structure is archived. [False]\n'
         '-7/--7za                  : CLI arguments passed to 7za after scripted ones.\n'
         '                            Add quotes if passing more than one argument.\n'
@@ -174,8 +187,10 @@ CLI_DEFAULTS = {
     'si': False,
     'root': '.',
     'unbox': False,
+    'unbox_multi': False,
     'verbose': False,
     'zip_structure': False,
+    'zip_archives': False,
     '7za': ''
 }
 
@@ -184,7 +199,7 @@ def cli_entry_point():
     cfg = Config.startup(defaults=CLI_DEFAULTS, aliases={
         'h': 'help', 'c': 'cores', 'cf': 'create_folders', 'md': 'match_dir', 'mf': 'match_file', 'u': 'unbox',
         'unzip': 'unbox', 'r': 'root', 'zs': 'zip_structure', 't': 'target', 'v': 'verbose', '7': '7za', 'g': 'glob',
-        'o': 'output', 'w': 'overwrite'
+        'o': 'output', 'w': 'overwrite', 'zz': 'zip_zips', 'um': 'unbox_multi'
     })
 
     if cfg.get_as_type('help', bool, False):
@@ -212,7 +227,13 @@ def cli_entry_point():
                 f'unless sub-folder from root were included when the archives were created.')
 
     if cfg.zip_structure and cfg.unbox:
-        warning(f'The --zip_structure option was specified, but does not do anything when unboxing and will ignored.')
+        warning(f'The --zip_structure option was specified, but does nothing when unboxing and will be ignored.')
+
+    if cfg.zip_zips and cfg.unbox:
+        warning(f'The --zip_zips option was specified, but does nothing when unboxing and will be ignored.')
+
+    if cfg.unbox_multi and not cfg.unbox:
+        warning(f'The --unbox_multi option was specified, but does nothing unless unboxing and will be ignored.')
 
     if cfg.zip_structure and cfg.create_folders:
         warning(f'Keeping sub-folders from root in archives, as well creating the folder structure in the '

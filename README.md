@@ -10,7 +10,7 @@ Other than providing that utility, the wrapper tries to provide users access to 
 
 Additionally, the package contains the `AsyncIOPool` class, which allows you to queue up a large number of asynchronous tasks, and it will keep a certain number of them running at all times, until all tasks are done. This works for any `asyncio` `Task`, but can be handily combined with `Py7za` (see below).
 
-Finally, a command line utility `py7za-box` is included, which allows you to quickly replace individual files with their zipped equivalent in-place and vice versa, without writing any code. The idea is that a user may want to zip many files in a large project, without removing them from their original location, and still be able to find them by name and easily extract them individually.
+Finally, a command line utility `py7za-box` ("pizza box") is included, which allows you to quickly replace individual files with their zipped equivalent in-place and vice versa, without writing any code. The idea is that a user may want to zip many files in a large project, without removing them from their original location, and still be able to find them by name and easily extract them individually.
 
 ## Install
 
@@ -31,7 +31,7 @@ sudo yum install -y p7zip
 sudo apt-get install -y p7zip
 ```
 
-## Example
+## Examples
 
 With the package installed, try running this script:
 ```
@@ -98,6 +98,38 @@ The third will create all the archives directly in `output`, but the archives wi
 Note that you could also set both `--structure` and `--folders` to be true, but that would create an archive `output/files/data.csv`, which would contain `files/data.csv`; when extracting the resulting files, care would need to be taken to avoid files ending up in double sub-folder structures, so a warning is issued if you combine these options.
 
 Also note that `py7za-box **/*.csv --structure 0 --folders 1 --target output` is not the same as `7za.exe a output/archive.zip *.csv -r`. The latter creates a single archive, not one archive for each file, which is the purpose of `py7za-box`.  
+
+## Common mistakes
+
+If a folder already contains archives (.zip, .gz, etc.) and you run `py7za-box` using some filter that would (also) match these files, they will not get zipped again, unless you also provide the `zip_archives` option. However, if you then proceed to unzip all archives, these original archives may also be matched and unzipped. I.e.:
+```commandline
+py7za-box **/*                 # everything gets matched, but matched archives like .zip files will get ignored
+py7za-box **/*.zip --unbox     # after this, if there were .zip files in the original folder, they will have been extracted
+
+py7za-box **/* --zip_archives  # this option will get py7za-box to re-zip the archives
+py7za-box **/*.zip --unbox     # after this, the folder will be identical to the original folder, with any archives
+```
+
+Based on the above, you might expect `--zip_archives` to be the default, after all it makes it easier to restore a folder to its original state. However, a more common use case is where a user boxes files in a folder, then proceeds to add new files, and then want to box these new files, without having to explicitly exclude the previously boxed files. For example:
+```commandline
+py7za-box **/*                 # box everything
+copy newfile.txt .             # add some new content
+py7za-box **/**                # box everything new (but leave the archives created before)
+```
+
+To make life a little easier, if an archive contains more than one file, it will not be extracted by `--unbox`. Since most existing archives likely contain more than one file, that means that in the first example above, only zip files that only contain a single file would be extracted by:
+```commandline
+py7za-box **/*.zip --unbox     # after this, if there were .zip files **with a single file in them ** 
+                               # in the original folder, they will have been extracted
+```
+
+But of course there are cases where you use `py7za-box` to zip folders, which may contain multiple files, so you need some way to tell it to do that. For example:
+```commandline
+py7za-box **/sub-* --match_dir                # box directories starting with "sub-"
+py7za-box **/sub-*.zip --unbox --unbox_multi  # unbox the resulting zip files, regardless of the number of files 
+```
+
+As with any major file operation, you will want to be careful, but hopefully the above helps making some common mistakes that can make a mess. `py7za` has been designed with defaults that keep the most common use cases in mind, but you can override those defaults as needed.
 
 ## Dependencies
 

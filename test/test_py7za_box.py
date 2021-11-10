@@ -203,7 +203,8 @@ class TestPy7zaBox(unittest.IsolatedAsyncioTestCase):
                          'zipped subdirectory original removed')
         self.assertTrue(Path('data/source/sub3.zip').is_file(),
                         '2nd zipped subdirectory in-place')
-        await box(Config(CLI_DEFAULTS | {'glob': 'sub?.zip', 'root': 'data/source', 'unbox': True}))
+        await box(Config(CLI_DEFAULTS | {'glob': 'sub?.zip', 'root': 'data/source', 'unbox': True,
+                                         'unbox_multi': True}))
         self.assertTrue(Path('data/source/sub2').is_dir(),
                        'zipped subdirectory restored')
         self.assertTrue(Path('data/source/sub2/y2.csv').is_file(),
@@ -229,7 +230,8 @@ class TestPy7zaBox(unittest.IsolatedAsyncioTestCase):
                         'zipped subdirectories in-place')
         self.assertTrue(Path('data/source/sub4.zip').is_file(),
                         'zipped files in-place')
-        await box(Config(CLI_DEFAULTS | {'glob': 'sub?.zip', 'root': 'data/source', 'unbox': True}))
+        await box(Config(CLI_DEFAULTS | {'glob': 'sub?.zip', 'root': 'data/source', 'unbox': True,
+                                         'unbox_multi': True}))
         self.assertTrue(Path('data/source/sub3').is_dir(),
                        'zipped subdirectory restored')
         self.assertTrue(Path('data/source/sub3/y3.csv').is_file(),
@@ -244,8 +246,38 @@ class TestPy7zaBox(unittest.IsolatedAsyncioTestCase):
                          'no files matched and zipped')
 
     async def test_box_multi_glob(self):
-        await box(Config(CLI_DEFAULTS) | {'glob': ['**/*.csv', '**/*.txt']})
+        await box(Config(CLI_DEFAULTS) | {'glob': ['**/*.csv', '**/*.txt'], 'root': 'data'})
         self.assertTrue(Path('data/source/sub/test.txt.zip').is_file(),
                        'txt files matched in multi-glob')
         self.assertTrue(Path('data/source/sub/y.csv.zip').is_file(),
-                       'txt files matched in multi-glob')
+                       'csv files matched in multi-glob')
+
+    async def test_zip_archives(self):
+        await box(Config(CLI_DEFAULTS) | {'glob': '**/*', 'root': 'data'})
+        self.assertTrue(Path('data/source/sub/test.txt.zip').is_file(),
+                       'txt files matched in catch all')
+        self.assertTrue(Path('data/source/sub/y.csv.zip').is_file(),
+                       'csv files matched in catch all')
+        with open('data/source/new.txt', 'w') as f:
+            f.write('test')
+        await box(Config(CLI_DEFAULTS) | {'glob': '**/*', 'root': 'data'})
+        self.assertTrue(Path('data/source/new.txt.zip').is_file(),
+                       'new txt files matched in catch all')
+        await box(Config(CLI_DEFAULTS) | {'glob': '**/*.zip', 'unbox': True, 'root': 'data'})
+        self.assertFalse(Path('data/source/sub/test.txt.zip').is_file(),
+                         'zip files were not rezipped and')
+        self.assertTrue(Path('data/source/sub/test.txt').is_file(),
+                       'original content from previously created archive extracted')
+
+    async def test_unbox_multi(self):
+        await box(Config(CLI_DEFAULTS | {'glob': '**/sub', 'match_dir': True}))
+        self.assertTrue(Path('data/source/sub.zip').is_file(),
+                        'zipped files in sub in single archive')
+        await box(Config(CLI_DEFAULTS | {'glob': '**/*.zip', 'unbox': True}))
+        self.assertTrue(Path('data/source/sub.zip').is_file(),
+                        'default unbox_multi False, archive not extracted')
+        await box(Config(CLI_DEFAULTS | {'glob': '**/*.zip', 'unbox': True, 'unbox_multi': True}))
+        self.assertTrue(Path('data/source/sub/y.csv').is_file() and Path('data/source/sub/test.txt').is_file(),
+                        'unbox_multi True, files extracted')
+        self.assertFalse(Path('data/source/sub.zip').is_file(),
+                         'unbox_multi True, archive removed')

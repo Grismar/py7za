@@ -7,6 +7,16 @@ No changes since last release.
 ### Fixed
   - help text formatting
 
+## [0.1.0] - 2021-11-10
+
+### Changed
+  - (breaking) by default, py7za-box unboxing will now not unzip matched archives that contain multiple files
+  - (breaking) by default, py7za-box single file boxing will no longer match and archive existing archives (.zip, .7z, .gz, etc.)  
+
+### Added
+  - an option to unbox multiple files `-um` / `--unbox_multi` to override the new standard behaviour for py7za-box
+  - an option to match and archive existing archives `-za` / `--zip_archives` to override the new standard behaviour for py7za-box
+
 ## [0.0.8] - 2021-11-01
 
 ### Added
@@ -72,6 +82,7 @@ First release in the wild.
   - Cloned and adapted from python_package_template.
 
 [Unreleased]: /../../../
+[0.1.0]: /../../../tags/0.1.0
 [0.0.8]: /../../../tags/0.0.8
 [0.0.7]: /../../../tags/0.0.7
 [0.0.6]: /../../../tags/0.0.6
