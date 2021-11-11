@@ -1,10 +1,22 @@
-import shlex
+from shlex import split
 from typing import Union, List, Callable
 from pathlib import Path
 from asyncio import create_subprocess_exec, run
 from asyncio.subprocess import PIPE
 from shutil import which
 from os import name as os_name
+
+
+def arg_split(args, platform=os_name):
+    """
+    Like calling shlex.split, but sets `posix=` according to platform
+    and unquotes previously quoted arguments on Windows
+    :param args: a command line string consisting of a command with arguments, e.g. r'dir "C:\Program Files"'
+    :param platform: a value like os.name would return, e.g. 'nt'
+    :return: a list of arguments like shlex.split(args) would have returned
+    """
+    return [a[1:-1].replace('""', '"') if a[0] == a[-1] == '"' else a
+            for a in (split(args, posix=False) if platform == 'nt' else split(args))]
 
 
 class Py7za:
@@ -31,13 +43,15 @@ class Py7za:
         Creates an (awaitable) object ready to run 7za with given arguments
         :param arguments: arguments to pass to 7za, after processing (always pass progress and output>1, disable log)
         :param on_start: callback to be called just before starting a 7za subprocess is started
-        :param working_dir: working directory for 7za subprocesses
+        :param working_dir: working directory for 7za
         """
         if which(self.executable_7za) is None:
             raise FileNotFoundError(f'7za executable "{self.executable_7za}" not found.')
 
         if isinstance(arguments, str):
-            arguments = shlex.split(arguments)
+            # replacing backslashes with forward slashes, to allow split to interpret correctly; this works as long
+            # as the Windows version supports it, but as this script only work on Python 3.8>, no issue
+            arguments = arg_split(arguments)
 
         # ignore output arguments passed, always pass progress and output to 1, disable log
         self.arguments = [a for a in arguments if a[:3] not in ['-bs', '-bb']] + ['-bsp1', '-bso1', '-bb']

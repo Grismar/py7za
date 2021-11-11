@@ -4,6 +4,14 @@
 
 No changes since last release.
 
+## [0.1.2] - 2021-11-11
+
+### Added
+  - when reporting completion, py7za-box now also reports the number of skipped files.
+
+### Fixed
+  - using UNC paths could cause py7za-box to fail, due to shlex.split() issues; a workaround to `shlex.split` is `py7za.arg_split`, [arg_split](py7za/_py7za.py).
+
 ## [0.1.1] - 2021-11-10
 
 ### Fixed
@@ -85,6 +93,7 @@ First release in the wild.
   - Cloned and adapted from python_package_template.
 
 [Unreleased]: /../../../
+[0.1.2]: /../../../tags/0.1.2
 [0.1.1]: /../../../tags/0.1.1
 [0.1.0]: /../../../tags/0.1.0
 [0.0.8]: /../../../tags/0.0.8

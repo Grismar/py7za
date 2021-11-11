@@ -14,6 +14,7 @@ ARCHIVE_SUFFIXES = ['.zip', '.zipx', '.gz', '.7z', '.s7z', '.lzma', '.lz', '.cab
 async def box(cfg):
     total = 0
     done = False
+    skipped = 0
     total_content_size = 0
     total_zip_size = 0
     current = 0
@@ -41,12 +42,14 @@ async def box(cfg):
     si = cfg['si']
 
     def globber(root, glob_expr):
+        nonlocal skipped
         if not isinstance(glob_expr, list):
             glob_expr = [glob_expr]
         for ge in glob_expr:
             for fn in Path(root).glob(ge):
                 if not unbox and not zip_archives and fn.suffix in ARCHIVE_SUFFIXES:
                     info(f'Skipping {fn} as it is an archive and --zip_archives was not specified.')
+                    skipped += 1
                     continue
                 if (fn.is_dir() and cfg['match_dir']) or (fn.is_file() and cfg['match_file']):
                     yield fn.relative_to(root).parent, fn.name
@@ -73,7 +76,7 @@ async def box(cfg):
             await sleep(0.5)
 
     async def run_all():
-        nonlocal aiop, total, done, total_content_size, total_zip_size
+        nonlocal aiop, total, done, total_content_size, total_zip_size, skipped
         zippers = []
 
         root = Path(cfg.root).absolute()
@@ -95,9 +98,10 @@ async def box(cfg):
                 archive = root / sub_path / fn
                 if not unbox_multi and len(ZipFile(archive).filelist) > 1:
                     info(f'Skipping {archive} as it has multiple files and --unbox_multi was not specified.')
+                    skipped += 1
                     continue
                 target_path = target / sub_path if create_folders else target
-                zippers.append(Py7za(f'x "{archive}" -o"{target_path}" {cli_options}', start))
+                zippers.append(Py7za(f'x "{archive}" "-o{target_path}" {cli_options}', start))
         total = len(zippers)
         async for py7za in aiop.arun_many(zippers):
             if print_result or update_status:
@@ -127,7 +131,8 @@ async def box(cfg):
         if update_status or print_result:
             stdout.write('\x1b[2K\r')
         print(f'Completed processing {nice_size(total_content_size)} '
-              f'of files {"from" if unbox else "into"} {total} archives, totaling {nice_size(total_zip_size)}.')
+              f'of files {"from" if unbox else "into"} {total} archives, totaling {nice_size(total_zip_size)}.'
+              f'\nSkipped {skipped} matched files.')
 
 
 def print_help():
