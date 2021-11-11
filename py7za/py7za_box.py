@@ -1,5 +1,6 @@
 from sys import stdout
 from os import remove as os_remove, stat
+from datetime import datetime
 from logging import error, warning, info, basicConfig, INFO
 from conffu import Config
 from pathlib import Path
@@ -12,6 +13,7 @@ ARCHIVE_SUFFIXES = ['.zip', '.zipx', '.gz', '.7z', '.s7z', '.lzma', '.lz', '.cab
 
 
 async def box(cfg):
+    start_time = datetime.now()
     total = 0
     done = False
     skipped = 0
@@ -34,6 +36,7 @@ async def box(cfg):
     list_status = cfg.output == 'd'
 
     unbox = cfg['unbox']
+    from_into = "from" if unbox else "into"
     unbox_multi = cfg['unbox_multi']
     delete = cfg['delete']
     create_folders = cfg['create_folders']
@@ -62,13 +65,13 @@ async def box(cfg):
         running.append(py7za)
 
     async def print_status():
-        nonlocal done, running, current, total
+        nonlocal done, running, current, total, from_into
         while True:
             if total == 0:
                 stdout.write(f'\x1b[2K\rStarting ... ')
             else:
-                stdout.write(f'\x1b[2K\rProcessing: {current} [{nice_size(total_content_size, si)}] '
-                             f'/ {total} [{nice_size(total_zip_size, si)}] ... '
+                stdout.write(f'\x1b[2K\rProcessing: {current} / {total} '
+                             f'[{nice_size(total_content_size, si)} {from_into} {nice_size(total_zip_size, si)}] ... '
                              f'{" ".join([f"{str(py7za.progress)}/100%" for py7za in running if py7za.progress])}')
             stdout.flush()
             if done:
@@ -81,7 +84,11 @@ async def box(cfg):
 
         root = Path(cfg.root).absolute()
         target = Path(cfg.target).absolute() if 'target' in cfg else root
+        n = 0
         for sub_path, fn in globber(cfg.root, cfg.glob):
+            if print_result and n % 100 == 0:
+                stdout.write(f'\x1b[2K\rMatching [{n}] ... ')
+            n += 1
             if create_folders:
                 (target / sub_path).mkdir(parents=True, exist_ok=True)
             if not unbox:
@@ -102,6 +109,8 @@ async def box(cfg):
                     continue
                 target_path = target / sub_path if create_folders else target
                 zippers.append(Py7za(f'x "{archive}" "-o{target_path}" {cli_options}', start))
+        if print_result:
+            stdout.write(f'\x1b[2K\rMatched {n} object(s), start processing on up to {aiop.size} cores ...\n')
         total = len(zippers)
         async for py7za in aiop.arun_many(zippers):
             if print_result or update_status:
@@ -111,11 +120,14 @@ async def box(cfg):
                 if print_result:
                     if list_status:
                         stdout.write(f'\x1b[2K\r'
-                                     f'{nice_size(cs, si)} {"from" if unbox else "into"} {nice_size(zs, si)} {fn}\n')
-                        stdout.write(f'Total: {current} [{nice_size(total_content_size, si)}] '
-                                     f'/ {total} [{nice_size(total_zip_size, si)}]')
+                                     f'{datetime.strftime(datetime.now(), "%H:%M:%S")}  '
+                                     f'{nice_size(cs, si)} {from_into} {nice_size(zs, si)} {fn}\n')
+                        stdout.write(f'Total: {current} / {total} '
+                                     f'[{nice_size(total_content_size, si)} '
+                                     f'{from_into} {nice_size(total_zip_size, si)}]')
                     else:
-                        stdout.write(f'{nice_size(cs, si)} {"from" if unbox else "into"} {nice_size(zs, si)} {fn}\n')
+                        stdout.write(f'{datetime.strftime(datetime.now(), "%H:%M:%S")}  '
+                                     f'{nice_size(cs, si)} {from_into} {nice_size(zs, si)} {fn}\n')
                     stdout.flush()
             if unbox and delete and (py7za.return_code == 0):
                 os_remove(py7za.arguments[1])
@@ -132,7 +144,7 @@ async def box(cfg):
             stdout.write('\x1b[2K\r')
         print(f'Completed processing {nice_size(total_content_size)} '
               f'of files {"from" if unbox else "into"} {total} archives, totaling {nice_size(total_zip_size)}.'
-              f'\nSkipped {skipped} matched files.')
+              f'\nTook {datetime.now()-start_time}. Skipped {skipped} matched files.')
 
 
 def print_help():

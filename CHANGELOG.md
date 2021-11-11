@@ -4,6 +4,15 @@
 
 No changes since last release.
 
+## [0.1.3] - 2021-11-11
+
+### Added
+  - during startup, py7za-box reports the number of matched files as they are found, before actually starting archiving; previously, the application would appear to be hanging while collecting large numbers of matched files
+
+### Changed
+  - default, list and verbose updates now include a timestamp at the start; py7za-box also reports total time taken once it completes.
+  - running status updated to be more clear "current / total \[file size from/into archive size\]"
+
 ## [0.1.2] - 2021-11-11
 
 ### Added
@@ -93,6 +102,7 @@ First release in the wild.
   - Cloned and adapted from python_package_template.
 
 [Unreleased]: /../../../
+[0.1.3]: /../../../tags/0.1.3
 [0.1.2]: /../../../tags/0.1.2
 [0.1.1]: /../../../tags/0.1.1
 [0.1.0]: /../../../tags/0.1.0
