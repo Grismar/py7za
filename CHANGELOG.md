@@ -4,6 +4,18 @@
 
 No changes since last release.
 
+## [0.1.5] - 2021-11-12
+
+### Added
+  - Support for other file formats in py7za-box, which previously would cause problems when using anything other than .zip (as ZipFile was used for metadata)
+  - `Py7za.list_archive` class method to obtain metadata from any archive format supported by 7za, or obtain metadata and a list of archive content details. 
+
+### Changed
+  - (BREAKING) default file format is no longer .zip but .7z for py7za-box; pass a 7zip parameter like `-7 "-tzip"` to revert to previous behaviour  
+
+### Fixed
+  - previously, py7za-box would crash if options were passed to 7za to write 7z or another archive format that wasn't .zip
+
 ## [0.1.4] - 2021-11-12
 
 ### Added
@@ -114,6 +126,7 @@ First release in the wild.
   - Cloned and adapted from python_package_template.
 
 [Unreleased]: /../../../
+[0.1.5]: /../../../tags/0.1.5
 [0.1.4]: /../../../tags/0.1.4
 [0.1.3]: /../../../tags/0.1.3
 [0.1.2]: /../../../tags/0.1.2

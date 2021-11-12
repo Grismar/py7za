@@ -5,13 +5,14 @@ from asyncio import create_subprocess_exec, run
 from asyncio.subprocess import PIPE
 from shutil import which
 from os import name as os_name
+from datetime import datetime
 
 
 def arg_split(args, platform=os_name):
     """
     Like calling shlex.split, but sets `posix=` according to platform
     and unquotes previously quoted arguments on Windows
-    :param args: a command line string consisting of a command with arguments, e.g. r'dir "C:\Program Files"'
+    :param args: a command line string consisting of a command with arguments, e.g. 'dir "C:/Program Files"'
     :param platform: a value like os.name would return, e.g. 'nt'
     :return: a list of arguments like shlex.split(args) would have returned
     """
@@ -119,3 +120,41 @@ class Py7za:
         :return: return code of process
         """
         return run(self.arun())
+
+    @classmethod
+    async def list_archive(cls, archive:str, meta_data_only: bool = False) -> tuple:
+        """
+        Opens and lists contents of archive, returning either just metadata or metadata and a file list with details
+        :param archive: name of the archive to list
+        :param meta_data_only: whether to only return metadata, or parse and include archive contents details
+        :return: tuple of size, compressed size, number of files, number of directories, and list of files
+                 list of files is empty or a list of tuples of datetime, attributes, size, compressed size, and name
+        """
+        proc = await create_subprocess_exec(
+            cls.executable_7za, 'l', archive, stdout=PIPE)
+        line = '\n'
+        listing = False
+        files = []
+        while line:
+            line = await proc.stdout.readline()
+            if line.startswith(b'----------'):
+                line = await proc.stdout.readline()
+                if listing:
+                    break
+                listing = not listing
+            if not meta_data_only and listing:
+                t = line.decode().split()
+                if len(t) == 6:
+                    d, t, a, s, c, n = t
+                else:
+                    d, t, a, s, n = t
+                    c = 0
+                files.append((datetime(*map(int, d.split('-')), *map(int, t.split(':'))), a, int(s), int(c), n))
+        await proc.wait()
+        metadata = line.decode().split()
+        if len(metadata) == 8:
+            __, __, s, c, f, __, d, __ = metadata
+        else:
+            __, __, s, c, f, __ = metadata
+            d = 0
+        return int(s), int(c), int(f), int(d), files

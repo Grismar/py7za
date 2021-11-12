@@ -1,3 +1,4 @@
+from shlex import split
 from sys import stdout
 from os import remove as os_remove, stat
 from datetime import datetime, timezone
@@ -40,6 +41,14 @@ async def box(cfg):
     cli_options += '-sdel ' if cfg['delete'] and not cfg['unbox'] else ''
     cli_options += f'-ao{cfg.overwrite} ' if cfg['unbox'] else ''
     cli_options += cfg['7za'] if '7za' in cfg else ''
+    types = [o for o in split(cli_options) if o.startswith('-t')]
+    if len(types) > 1:
+        error(f'Cannot provide multiple archive types to 7za: {types}')
+        exit(1)
+    elif len(types) == 0:
+        cfg.suffix = '.7z'
+    else:
+        cfg.suffix = f'.{types[0][2:]}'
 
     print_result = cfg.output in 'dlv'
     info_command = cfg.output == 'v'
@@ -115,10 +124,12 @@ async def box(cfg):
                     content = root / sub_path / fn
                     wd = '.'
                 zippers.append(
-                    Py7za(f'a "{target_path}.zip" "{content}" {cli_options}', on_start=start, working_dir=wd))
+                    Py7za(f'a "{target_path}{cfg.suffix}" "{content}" {cli_options}', on_start=start, working_dir=wd))
             else:
                 archive = root / sub_path / fn
-                if not unbox_multi and len(ZipFile(archive).filelist) > 1:
+                if not unbox_multi and (
+                        (archive.suffix == '.zip' and len(ZipFile(archive).filelist) > 1) or
+                        ((await Py7za.list_archive(str(archive), meta_data_only=True))[2] > 1)):
                     info(f'Skipping {archive} as it has multiple files and --unbox_multi was not specified.')
                     skipped += 1
                     continue
@@ -133,11 +144,15 @@ async def box(cfg):
                 error(f'Return code {py7za.return_code} from: {list2cmdline([py7za.executable_7za, *py7za.arguments])}')
                 continue
             fn = py7za.arguments[1]
-            if not Path(fn).is_file():
+            pfn = Path(fn)
+            if not pfn.is_file():
                 error(f'Archive file {fn} not found.')
                 continue
             if print_result or update_status or log:
-                total_content_size += (cs := sum([zip_info.file_size for zip_info in ZipFile(fn).filelist]))
+                if pfn.suffix == '.zip':
+                    total_content_size += (cs := sum([zip_info.file_size for zip_info in ZipFile(fn).filelist]))
+                else:
+                    total_content_size += (cs := (await Py7za.list_archive(fn, meta_data_only=True))[0])
                 total_zip_size += (zs := stat(fn).st_size)
                 if log:
                     with open(log, 'a') as lf:
