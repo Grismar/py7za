@@ -4,6 +4,18 @@
 
 No changes since last release.
 
+## [0.1.4] - 2021-11-12
+
+### Added
+  - `-p`/`--parallel` (formerly `-c`/`--cores`) now accepts '<n>x' as a multiplier to the number of cores, e.g. with 8 available cores, if `2x` is passed, 16 processes will be spawned in parallel.
+  - `-l`/`--log` is a new option to which you can pass a path to a log file and every completed operation will be logged to that file with a timestamp, name of the associated archived and the size of both the contents and the archive, in both human readable format (string, e.g. 1.2KiB) and bytes (integer). 
+
+### Changed
+  - (BREAKING) renamed `-c`/`--cores` to `-p`/`--parallel`, to be more accurate and avoid confusion about how this actually works. The default 0 still uses the number of available cores.
+
+### Fixed
+  - Previously, FileNotFoundErrors and failed 7za execution (return code > 0) would not be caught and cause the operation to fail; now an error is reported, but the process continues. 
+
 ## [0.1.3] - 2021-11-11
 
 ### Added
@@ -102,6 +114,7 @@ First release in the wild.
   - Cloned and adapted from python_package_template.
 
 [Unreleased]: /../../../
+[0.1.4]: /../../../tags/0.1.4
 [0.1.3]: /../../../tags/0.1.3
 [0.1.2]: /../../../tags/0.1.2
 [0.1.1]: /../../../tags/0.1.1

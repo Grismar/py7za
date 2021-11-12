@@ -1,11 +1,12 @@
 from sys import stdout
 from os import remove as os_remove, stat
-from datetime import datetime
+from datetime import datetime, timezone
 from logging import error, warning, info, basicConfig, INFO
 from conffu import Config
 from pathlib import Path
 from asyncio import run, sleep, gather
 from py7za import Py7za, AsyncIOPool, available_cpu_count, nice_size
+from subprocess import list2cmdline
 # only used for status
 from zipfile import ZipFile
 
@@ -21,7 +22,19 @@ async def box(cfg):
     total_zip_size = 0
     current = 0
     running = []
-    aiop = AsyncIOPool(pool_size=cfg['cores'] if cfg['cores'] else available_cpu_count())
+
+    parallel = 0
+    try:
+        if isinstance(cfg['parallel'], str) and cfg['parallel'] and cfg['parallel'][-1].lower() == 'x':
+            parallel = int(cfg['parallel'][:-1]) * available_cpu_count()
+        else:
+            parallel = int(cfg['parallel'])
+    except ValueError:
+        error(f'Invalid value for --parallel: {cfg["parallel"]}')
+        exit(1)
+    if parallel == 0:
+        parallel = available_cpu_count()
+    aiop = AsyncIOPool(pool_size=parallel)
 
     cli_options = '-y '
     cli_options += '-sdel ' if cfg['delete'] and not cfg['unbox'] else ''
@@ -34,6 +47,8 @@ async def box(cfg):
         basicConfig(level=INFO, format='%(asctime)s %(levelname)s %(message)s')
     update_status = cfg.output == 's'
     list_status = cfg.output == 'd'
+
+    log = cfg['log'] if 'log' in cfg else None
 
     unbox = cfg['unbox']
     from_into = "from" if unbox else "into"
@@ -60,7 +75,7 @@ async def box(cfg):
     def start(py7za):
         nonlocal running, current, info_command
         if info_command:
-            info(f'"{py7za.working_dir}": '+' '.join([py7za.executable_7za, *py7za.arguments]))
+            info(f'"{py7za.working_dir}": '+list2cmdline([py7za.executable_7za, *py7za.arguments]))
         current += 1
         running.append(py7za)
 
@@ -110,13 +125,24 @@ async def box(cfg):
                 target_path = target / sub_path if create_folders else target
                 zippers.append(Py7za(f'x "{archive}" "-o{target_path}" {cli_options}', start))
         if print_result:
-            stdout.write(f'\x1b[2K\rMatched {n} object(s), start processing on up to {aiop.size} cores ...\n')
+            stdout.write(f'\x1b[2K\rMatched {n} object(s), '
+                         f'start processing in up to {aiop.size} parallel processes ...\n')
         total = len(zippers)
         async for py7za in aiop.arun_many(zippers):
-            if print_result or update_status:
-                fn = py7za.arguments[1]
+            if py7za.return_code > 0:
+                error(f'Return code {py7za.return_code} from: {list2cmdline([py7za.executable_7za, *py7za.arguments])}')
+                continue
+            fn = py7za.arguments[1]
+            if not Path(fn).is_file():
+                error(f'Archive file {fn} not found.')
+                continue
+            if print_result or update_status or log:
                 total_content_size += (cs := sum([zip_info.file_size for zip_info in ZipFile(fn).filelist]))
                 total_zip_size += (zs := stat(fn).st_size)
+                if log:
+                    with open(log, 'a') as lf:
+                        lf.write(f'{datetime.strftime(datetime.now(timezone.utc).astimezone(), "%Y-%m-%d %H:%M:%S%z")},'
+                                 f'{fn},{nice_size(cs, si)},{cs},{nice_size(zs, si)},{zs}\n')
                 if print_result:
                     if list_status:
                         stdout.write(f'\x1b[2K\r'
@@ -129,7 +155,7 @@ async def box(cfg):
                         stdout.write(f'{datetime.strftime(datetime.now(), "%H:%M:%S")}  '
                                      f'{nice_size(cs, si)} {from_into} {nice_size(zs, si)} {fn}\n')
                     stdout.flush()
-            if unbox and delete and (py7za.return_code == 0):
+            if unbox and delete:
                 os_remove(py7za.arguments[1])
             running.remove(py7za)
         done = True
@@ -161,11 +187,12 @@ def print_help():
         '                            Add quotes if your expression contains spaces.\n'
         'Options:\n'
         '-h/--help                 : This text.\n'
-        '-c/--cores <n>            : Try to use specific number of cores. [0 = all]\n'
         '-d/--delete               : Remove the source after (un)boxing. [True]\n'
         '-cf/--create_folders      : Recreate folder structure in target path. [True]\n'
+        '-l/--log <path>           : Log source, size, target, size as .csv. [None]\n'
         '-md/--match_dir [bool]    : Glob expression(s) should match dirs. [False]\n'
         '-mf/--match_file [bool]   : Glob expression(s) should match files. [True]\n'
+        '-p/--parallel <n>         : #Parallel processes to run [0 = available cores]\n'
         '-r/--root <path>          : Path glob expression(s) are relative to. ["."]\n'
         '-t/--target <path>        : Root path for output. ["" / in-place]\n'
         '-u/--unbox/--unzip        : Unzip instead of zip (glob to match archives).\n'
@@ -194,7 +221,7 @@ def print_help():
 
 
 CLI_DEFAULTS = {
-    'cores': 0,
+    'parallel': '0',
     'delete': True,
     'create_folders': True,
     'match_dir': False,
@@ -214,9 +241,9 @@ CLI_DEFAULTS = {
 
 def cli_entry_point():
     cfg = Config.startup(defaults=CLI_DEFAULTS, aliases={
-        'h': 'help', 'c': 'cores', 'cf': 'create_folders', 'md': 'match_dir', 'mf': 'match_file', 'u': 'unbox',
+        'h': 'help', 'p': 'parallel', 'cf': 'create_folders', 'md': 'match_dir', 'mf': 'match_file', 'u': 'unbox',
         'unzip': 'unbox', 'r': 'root', 'zs': 'zip_structure', 't': 'target', 'v': 'verbose', '7': '7za', 'g': 'glob',
-        'o': 'output', 'w': 'overwrite', 'za': 'zip_archives', 'um': 'unbox_multi'
+        'o': 'output', 'w': 'overwrite', 'za': 'zip_archives', 'um': 'unbox_multi', 'l': 'log'
     })
 
     if cfg.get_as_type('help', bool, False):
