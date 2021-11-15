@@ -122,7 +122,7 @@ class Py7za:
         return run(self.arun())
 
     @classmethod
-    async def list_archive(cls, archive:str, meta_data_only: bool = False) -> tuple:
+    async def list_archive(cls, archive: str, meta_data_only: bool = False) -> tuple:
         """
         Opens and lists contents of archive, returning either just metadata or metadata and a file list with details
         :param archive: name of the archive to list
@@ -152,7 +152,9 @@ class Py7za:
                 files.append((datetime(*map(int, d.split('-')), *map(int, t.split(':'))), a, int(s), int(c), n))
         await proc.wait()
         metadata = line.decode().split()
-        if len(metadata) == 8:
+        if not metadata:
+            s, c, f, d = 0, 0, 0, 0
+        elif len(metadata) == 8:
             __, __, s, c, f, __, d, __ = metadata
         else:
             __, __, s, c, f, __ = metadata

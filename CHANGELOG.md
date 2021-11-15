@@ -1,8 +1,23 @@
 # Changelog
 
+This package is currently in 'beta', in that it is in use by several users, but you may run into situations that simply haven't come up in use or testing so far. Feel free to submit an issue (and preferably suggest a solution).
+
 ## [Unreleased]
 
 No changes since last release.
+
+## [0.1.6] - 2021-11-15
+
+### Added
+  - an `-el`/`--error_log` (alias `-el`/`--error_log`) option now allows error (and info and warning) messages to be captured in a file, instead of writing them to the console. Of course, you can also just redirect standard error, but this option is there for convenience
+  - `--unzip_multi` alias for `--unbox_multi`, analogous to the `--unzip` alias for `--unbox`
+
+### Changed
+  - when specifying `--unbox_multi`, you no longer have to specify `--unbox`. However, if you specify `--unbox` specifically as False, `--unbox_multi` will be ignored (i.e. no contradiction allowed and `--unbox` is stronger).
+  - when logging an error, the error message itself (from 7za.exe) will also be logged on the following lines
+
+### Fixed
+  - previously if all files being archived were locked, resulting in an empty archive, `py7za-box` would fail listing metadata on the archive 
 
 ## [0.1.5] - 2021-11-12
 
@@ -20,7 +35,7 @@ No changes since last release.
 
 ### Added
   - `-p`/`--parallel` (formerly `-c`/`--cores`) now accepts '<n>x' as a multiplier to the number of cores, e.g. with 8 available cores, if `2x` is passed, 16 processes will be spawned in parallel.
-  - `-l`/`--log` is a new option to which you can pass a path to a log file and every completed operation will be logged to that file with a timestamp, name of the associated archived and the size of both the contents and the archive, in both human readable format (string, e.g. 1.2KiB) and bytes (integer). 
+  - `-l`/`--log` is a new option to which you can pass a path to a log file and every completed operation will be logged to that file with a timestamp, name of the associated archived and the size of both the contents and the archive, in both human-readable format (string, e.g. 1.2 KiB) and bytes (integer). 
 
 ### Changed
   - (BREAKING) renamed `-c`/`--cores` to `-p`/`--parallel`, to be more accurate and avoid confusion about how this actually works. The default 0 still uses the number of available cores.
@@ -88,8 +103,8 @@ No changes since last release.
 ## [0.0.5] - 2021-10-25
 
 ### Fixed
-  - relative import of version (running script in development as package.module, instead of full script path name);
-  - (non-functional:) refactoring and suppression of irrelevant warnings.
+  - relative import of version (running script in development as `package.module`, instead of full script path name);
+  - (non-functional) refactoring and suppression of irrelevant warnings.
 
 ## [0.0.4] - 2021-10-24
 
@@ -126,6 +141,7 @@ First release in the wild.
   - Cloned and adapted from python_package_template.
 
 [Unreleased]: /../../../
+[0.1.6]: /../../../tags/0.1.6
 [0.1.5]: /../../../tags/0.1.5
 [0.1.4]: /../../../tags/0.1.4
 [0.1.3]: /../../../tags/0.1.3

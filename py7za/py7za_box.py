@@ -2,7 +2,8 @@ from shlex import split
 from sys import stdout
 from os import remove as os_remove, stat
 from datetime import datetime, timezone
-from logging import error, warning, info, basicConfig, INFO
+import logging
+from logging import error, warning, info
 from conffu import Config
 from pathlib import Path
 from asyncio import run, sleep, gather
@@ -52,8 +53,15 @@ async def box(cfg):
 
     print_result = cfg.output in 'dlv'
     info_command = cfg.output == 'v'
-    if info_command:
-        basicConfig(level=INFO, format='%(asctime)s %(levelname)s %(message)s')
+    level = logging.INFO if info_command else logging.WARNING
+    if 'log_error' in cfg:
+        # only log to file
+        logging.basicConfig(
+            level=level, format='%(asctime)s %(levelname)s %(message)s', filename=cfg.log_error, filemode='a')
+    else:
+        # only log to console, no additional setup required
+        logging.basicConfig(
+            level=level, format='%(asctime)s %(levelname)s %(message)s')
     update_status = cfg.output == 's'
     list_status = cfg.output == 'd'
 
@@ -141,7 +149,8 @@ async def box(cfg):
         total = len(zippers)
         async for py7za in aiop.arun_many(zippers):
             if py7za.return_code > 0:
-                error(f'Return code {py7za.return_code} from: {list2cmdline([py7za.executable_7za, *py7za.arguments])}')
+                error(f'Return code {py7za.return_code} from: {list2cmdline([py7za.executable_7za, *py7za.arguments])}'
+                      f'\n{py7za.errors.decode()}')
                 continue
             fn = py7za.arguments[1]
             pfn = Path(fn)
@@ -205,6 +214,7 @@ def print_help():
         '-d/--delete               : Remove the source after (un)boxing. [True]\n'
         '-cf/--create_folders      : Recreate folder structure in target path. [True]\n'
         '-l/--log <path>           : Log source, size, target, size as .csv. [None]\n'
+        '-el/--error_log <path>    : Log warnings and error messages to file. [None]\n'
         '-md/--match_dir [bool]    : Glob expression(s) should match dirs. [False]\n'
         '-mf/--match_file [bool]   : Glob expression(s) should match files. [True]\n'
         '-p/--parallel <n>         : #Parallel processes to run [0 = available cores]\n'
@@ -212,10 +222,11 @@ def print_help():
         '-t/--target <path>        : Root path for output. ["" / in-place]\n'
         '-u/--unbox/--unzip        : Unzip instead of zip (glob to match archives).\n'
         '-um/--unbox_multi         : Whether to unzip multi-file archives. [False]\n'
+        '                            (implies --unbox, which can be omitted)'
         '-o/--output [d/l/q/s/v]   : Default (a line per archive with status), list,\n'
         '                            quiet, status, or verbose output. Verbose prints\n'
-        '                            each full 7za command.\n'
-        '                            Note: d/l/v does not work for all archive types.\n'
+        '                            each full 7za command and logs at info level.\n'
+        '                            Note: d/l/v do not work for all archive types.\n'
         '-si                       : Whether to use SI units for file sizes. [False]\n'
         '-w/overwrite [a/s/u/t]    : Used overwrite mode when unboxing. [s]\n'
         '                            a:all, s:skip, u:rename new, t:rename existing.\n'
@@ -241,7 +252,7 @@ CLI_DEFAULTS = {
     'create_folders': True,
     'match_dir': False,
     'match_file': True,
-    'output': 'default',
+    'output': 'd',
     'overwrite': 's',
     'si': False,
     'root': '.',
@@ -258,7 +269,8 @@ def cli_entry_point():
     cfg = Config.startup(defaults=CLI_DEFAULTS, aliases={
         'h': 'help', 'p': 'parallel', 'cf': 'create_folders', 'md': 'match_dir', 'mf': 'match_file', 'u': 'unbox',
         'unzip': 'unbox', 'r': 'root', 'zs': 'zip_structure', 't': 'target', 'v': 'verbose', '7': '7za', 'g': 'glob',
-        'o': 'output', 'w': 'overwrite', 'za': 'zip_archives', 'um': 'unbox_multi', 'l': 'log'
+        'o': 'output', 'w': 'overwrite', 'za': 'zip_archives', 'um': 'unbox_multi', 'l': 'log', 'le': 'log_error',
+        'unzip_multi': 'unbox_multi', 'error_log': 'log_error', 'el': 'log_error'
     })
 
     if cfg.get_as_type('help', bool, False):
@@ -292,7 +304,11 @@ def cli_entry_point():
         warning(f'The --zip_archives option was specified, but does nothing when unboxing and will be ignored.')
 
     if cfg.unbox_multi and not cfg.unbox:
-        warning(f'The --unbox_multi option was specified, but does nothing unless unboxing and will be ignored.')
+        if 'unbox' in cfg.arguments:
+            warning(f'The --unbox_multi option was specified, but unbox was set to False, so the option is ignored.')
+        else:
+            # set unbox to true if only unbox_multi was provided
+            cfg.unbox = True
 
     if cfg.zip_structure and cfg.create_folders:
         warning(f'Keeping sub-folders from root in archives, as well creating the folder structure in the '

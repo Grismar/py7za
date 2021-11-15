@@ -101,6 +101,8 @@ Also note that `py7za-box **/*.csv --structure 0 --folders 1 --target output` is
 
 ## Common mistakes
 
+### Folders that already have archives
+
 If a folder already contains archives (.zip, .gz, etc.) and you run `py7za-box` using some filter that would (also) match these files, they will not get zipped again, unless you also provide the `zip_archives` option. However, if you then proceed to unzip all archives, these original archives may also be matched and unzipped. I.e.:
 ```commandline
 py7za-box **/*                 # everything gets matched, but matched archives like .zip files will get ignored
@@ -130,6 +132,39 @@ py7za-box **/sub-*.zip --unbox --unbox_multi  # unbox the resulting zip files, r
 ```
 
 As with any major file operation, you will want to be careful, but hopefully the above helps making some common mistakes that can make a mess. `py7za` has been designed with defaults that keep the most common use cases in mind, but you can override those defaults as needed.
+
+### Matching directories
+
+Consider this command:
+```commandline
+py7za-box **/* --match_dir
+```
+Looks innocent, but note that this matches all files and folders it can find and will try to archive all of them. This almost certainly will lead to a folder being archived before its content, causing `py7za-box` to fail because after the folder is archived, the file can no longer be found and thus cannot be archived.
+
+So, how about:
+```commandline
+py7za-box **/* --match_dir --match_file false
+```
+Better, but matched subdirectories can still cause the same problem. When using `--match_dir`, you should make sure there won't be matches inside matches. `py7za-box` does *not* currently offer a `--safe` option, though it may in the future (which could check for these situations before running). Typically this means you either only match directories that have names or match patterns where you know they won't be nested, or you do something like this:
+```commandline
+py7za-box */temp --match_dir --match_file false
+```
+This would match and directory named `temp` exactly one level from the current directory, so accidental nesting is impossible. However, it would of course miss `./dir1/dir2/temp` while `**/temp` would match both `./dir1/temp` and `./dir1/temp/temp`. There is no glob expression that allows you to only match the first or last occurrance. Similar to `--safe`, `py7za-box` currently does *not* have a `--regex_match` option where you could provide more powerful (but slower) matching, but may in future versions.
+
+A final note on matching directories: unless you happen to know every directory you're matching only contains a single file, you should most likely pass `--unbox_multi` when unboxing archived directories, so that directories with multiple files also get unboxed corretly. However, not that this may also unzip multi-file archives that were present before boxing.
+
+```commandline
+py7za-box */* --match_dir --match_file false
+py7za-box */*.7z --unbox --unbox_multi
+```
+
+### Locked files
+
+If you have files open in a program that locks the file for reading or writing, `py7za-box` may file to archive them, or remove them after archiving. A warning or error will be logged (and it's recommended you log to file with `--log_error <path>` for easy review). 
+
+However, consider this scenario: a file is locked when archiving, so no file is archived and an error is logged. However, an (empty) archive is still created. From the presence of the archive (and ignoring the error log), you may falsely conclude that your file is safe and remove the original - you've just removed the only copy of the file!
+
+If you notice these errors, simply close the program locking the files and rerun the boxing operation - under normal settings, it will proceed to box these files and ignore the other previously created archives.
 
 ## Dependencies
 
