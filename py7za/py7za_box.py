@@ -20,6 +20,7 @@ async def box(cfg):
     total = 0
     done = False
     skipped = 0
+    finished = 0
     total_content_size = 0
     total_zip_size = 0
     current = 0
@@ -111,7 +112,7 @@ async def box(cfg):
             await sleep(0.5)
 
     async def run_all():
-        nonlocal aiop, total, done, total_content_size, total_zip_size, skipped
+        nonlocal aiop, total, done, total_content_size, total_zip_size, skipped, finished
         zippers = []
 
         root = Path(cfg.root).absolute()
@@ -148,6 +149,7 @@ async def box(cfg):
                          f'start processing in up to {aiop.size} parallel processes ...\n')
         total = len(zippers)
         async for py7za in aiop.arun_many(zippers):
+            finished += 1
             if py7za.return_code > 0:
                 error(f'Return code {py7za.return_code} from: {list2cmdline([py7za.executable_7za, *py7za.arguments])}'
                       f'\n{py7za.errors.decode()}')
@@ -172,9 +174,9 @@ async def box(cfg):
                         stdout.write(f'\x1b[2K\r'
                                      f'{datetime.strftime(datetime.now(), "%H:%M:%S")}  '
                                      f'{nice_size(cs, si)} {from_into} {nice_size(zs, si)} {fn}\n')
-                        stdout.write(f'Total: {current} / {total} '
+                        stdout.write(f'Total: {finished} / {total} '
                                      f'[{nice_size(total_content_size, si)} '
-                                     f'{from_into} {nice_size(total_zip_size, si)}]')
+                                     f'{from_into} {nice_size(total_zip_size, si)}] ({current - finished} running)')
                     else:
                         stdout.write(f'{datetime.strftime(datetime.now(), "%H:%M:%S")}  '
                                      f'{nice_size(cs, si)} {from_into} {nice_size(zs, si)} {fn}\n')
@@ -222,7 +224,7 @@ def print_help():
         '-t/--target <path>        : Root path for output. ["" / in-place]\n'
         '-u/--unbox/--unzip        : Unzip instead of zip (glob to match archives).\n'
         '-um/--unbox_multi         : Whether to unzip multi-file archives. [False]\n'
-        '                            (implies --unbox, which can be omitted)'
+        '                            (implies --unbox, which can be omitted)\n'
         '-o/--output [d/l/q/s/v]   : Default (a line per archive with status), list,\n'
         '                            quiet, status, or verbose output. Verbose prints\n'
         '                            each full 7za command and logs at info level.\n'

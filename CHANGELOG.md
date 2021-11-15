@@ -6,6 +6,14 @@ This package is currently in 'beta', in that it is in use by several users, but 
 
 No changes since last release.
 
+## [0.1.7] - 2021-11-16
+
+### Added
+  - reporting finished instead of current (including running) and separately reporting running (dlv)
+
+### Fixed
+  - Misspelling in help, missing newline
+
 ## [0.1.6] - 2021-11-15
 
 ### Added
@@ -141,6 +149,7 @@ First release in the wild.
   - Cloned and adapted from python_package_template.
 
 [Unreleased]: /../../../
+[0.1.7]: /../../../tags/0.1.7
 [0.1.6]: /../../../tags/0.1.6
 [0.1.5]: /../../../tags/0.1.5
 [0.1.4]: /../../../tags/0.1.4
