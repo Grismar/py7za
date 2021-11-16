@@ -1,6 +1,6 @@
 from shlex import split
 from sys import stdout
-from os import remove as os_remove, stat
+from os import remove as os_remove, stat, name as os_name
 from datetime import datetime, timezone
 import logging
 from logging import error, warning, info
@@ -9,6 +9,7 @@ from pathlib import Path
 from asyncio import run, sleep, gather
 from py7za import Py7za, AsyncIOPool, available_cpu_count, nice_size
 from subprocess import list2cmdline
+import re
 # only used for status
 from zipfile import ZipFile
 
@@ -25,6 +26,15 @@ async def box(cfg):
     total_zip_size = 0
     current = 0
     running = []
+
+    if 'regex' in cfg:
+        try:
+            regex = re.compile(cfg.regex)
+        except re.error:
+            error(f'Invalid regex pattern: "{cfg.regex}"')
+            exit(1)
+    else:
+        regex = False
 
     parallel = 0
     try:
@@ -67,6 +77,8 @@ async def box(cfg):
     list_status = cfg.output == 'd'
 
     log = cfg['log'] if 'log' in cfg else None
+    test = cfg['test'] if 'test' in cfg else False
+    skipped_test = 0
 
     unbox = cfg['unbox']
     from_into = "from" if unbox else "into"
@@ -78,11 +90,15 @@ async def box(cfg):
     si = cfg['si']
 
     def globber(root, glob_expr):
-        nonlocal skipped
+        nonlocal skipped, regex
         if not isinstance(glob_expr, list):
             glob_expr = [glob_expr]
         for ge in glob_expr:
             for fn in Path(root).glob(ge):
+                if regex and not regex.match(str(fn)):
+                    info(f'Skipping {fn} as it does not match provided regex.')
+                    skipped += 1
+                    continue
                 if not unbox and not zip_archives and fn.suffix in ARCHIVE_SUFFIXES:
                     info(f'Skipping {fn} as it is an archive and --zip_archives was not specified.')
                     skipped += 1
@@ -112,17 +128,17 @@ async def box(cfg):
             await sleep(0.5)
 
     async def run_all():
-        nonlocal aiop, total, done, total_content_size, total_zip_size, skipped, finished
+        nonlocal aiop, total, done, total_content_size, total_zip_size, skipped, finished, test, skipped_test
         zippers = []
 
         root = Path(cfg.root).absolute()
         target = Path(cfg.target).absolute() if 'target' in cfg else root
         n = 0
         for sub_path, fn in globber(cfg.root, cfg.glob):
-            if print_result and n % 100 == 0:
+            if print_result and n % 100 == 0 and not test:
                 stdout.write(f'\x1b[2K\rMatching [{n}] ... ')
             n += 1
-            if create_folders:
+            if create_folders and not test:
                 (target / sub_path).mkdir(parents=True, exist_ok=True)
             if not unbox:
                 target_path = target / sub_path / fn if create_folders else target / fn
@@ -132,8 +148,13 @@ async def box(cfg):
                 else:
                     content = root / sub_path / fn
                     wd = '.'
-                zippers.append(
-                    Py7za(f'a "{target_path}{cfg.suffix}" "{content}" {cli_options}', on_start=start, working_dir=wd))
+                if not test:
+                    zippers.append(
+                        Py7za(f'a "{target_path}{cfg.suffix}" "{content}" {cli_options}',
+                              on_start=start, working_dir=wd))
+                else:
+                    skipped_test += 1
+                    print(f'TEST in "{wd}": 7za.exe a "{target_path}{cfg.suffix}" "{content}" {cli_options}')
             else:
                 archive = root / sub_path / fn
                 if not unbox_multi and (
@@ -143,7 +164,11 @@ async def box(cfg):
                     skipped += 1
                     continue
                 target_path = target / sub_path if create_folders else target
-                zippers.append(Py7za(f'x "{archive}" "-o{target_path}" {cli_options}', start))
+                if not test:
+                    zippers.append(Py7za(f'x "{archive}" "-o{target_path}" {cli_options}', start))
+                else:
+                    skipped_test += 1
+                    print(f'TEST: 7za.exe x "{archive}" "-o{target_path}" {cli_options}')
         if print_result:
             stdout.write(f'\x1b[2K\rMatched {n} object(s), '
                          f'start processing in up to {aiop.size} parallel processes ...\n')
@@ -196,7 +221,9 @@ async def box(cfg):
             stdout.write('\x1b[2K\r')
         print(f'Completed processing {nice_size(total_content_size)} '
               f'of files {"from" if unbox else "into"} {total} archives, totaling {nice_size(total_zip_size)}.'
-              f'\nTook {datetime.now()-start_time}. Skipped {skipped} matched files.')
+              f'\nTook {datetime.now()-start_time}. Skipped {skipped} files matching glob.')
+        if test:
+            print(f'TEST: would have started {"un" if unbox else ""}boxing {skipped_test} matches.')
 
 
 def print_help():
@@ -221,6 +248,7 @@ def print_help():
         '-mf/--match_file [bool]   : Glob expression(s) should match files. [True]\n'
         '-p/--parallel <n>         : #Parallel processes to run [0 = available cores]\n'
         '-r/--root <path>          : Path glob expression(s) are relative to. ["."]\n'
+        '-re/--regex <expr>        : Regex path of globbed files must match. [None]\n'
         '-t/--target <path>        : Root path for output. ["" / in-place]\n'
         '-u/--unbox/--unzip        : Unzip instead of zip (glob to match archives).\n'
         '-um/--unbox_multi         : Whether to unzip multi-file archives. [False]\n'
@@ -230,6 +258,7 @@ def print_help():
         '                            each full 7za command and logs at info level.\n'
         '                            Note: d/l/v do not work for all archive types.\n'
         '-si                       : Whether to use SI units for file sizes. [False]\n'
+        '--test                    : Test mode - no files are changed. [False]\n'
         '-w/overwrite [a/s/u/t]    : Used overwrite mode when unboxing. [s]\n'
         '                            a:all, s:skip, u:rename new, t:rename existing.\n'
         '-za/--zip_archives [bool] : Whether to zip matched archives (again). [False]\n'
@@ -258,6 +287,7 @@ CLI_DEFAULTS = {
     'overwrite': 's',
     'si': False,
     'root': '.',
+    'test': False,
     'unbox': False,
     'unbox_multi': False,
     'verbose': False,
@@ -268,11 +298,18 @@ CLI_DEFAULTS = {
 
 
 def cli_entry_point():
+    # enable sufficient ansi support on Windows
+    if os_name == 'nt':
+        from ctypes import windll
+        k = windll.kernel32
+        k.SetConsoleMode(k.GetStdHandle(-11), 7)
+
     cfg = Config.startup(defaults=CLI_DEFAULTS, aliases={
         'h': 'help', 'p': 'parallel', 'cf': 'create_folders', 'md': 'match_dir', 'mf': 'match_file', 'u': 'unbox',
         'unzip': 'unbox', 'r': 'root', 'zs': 'zip_structure', 't': 'target', 'v': 'verbose', '7': '7za', 'g': 'glob',
         'o': 'output', 'w': 'overwrite', 'za': 'zip_archives', 'um': 'unbox_multi', 'l': 'log', 'le': 'log_error',
-        'unzip_multi': 'unbox_multi', 'error_log': 'log_error', 'el': 'log_error'
+        'unzip_multi': 'unbox_multi', 'error_log': 'log_error', 'el': 'log_error', 're': 'regex',
+        'regular_expression': 'regex'
     })
 
     if cfg.get_as_type('help', bool, False):
