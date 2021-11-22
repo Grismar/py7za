@@ -13,6 +13,7 @@ class AsyncIOPool:
         self.size = pool_size
 
         self._tasks = Queue()
+        self._aws = set()
 
     @property
     def size(self):
@@ -44,18 +45,25 @@ class AsyncIOPool:
         """
         if aws is not None:
             await self.enqueue(aws)
-        aws = set()
+        self._aws = set()
         while True:
             # room for more tasks and tasks queued
-            while len(aws) < self._size and not self._tasks.empty():
+            while len(self._aws) < self._size and not self._tasks.empty():
                 # add the next task
-                aws.add(await self._tasks.get())
+                self._aws.add(await self._tasks.get())
             else:
-                if aws:
+                if self._aws:
                     # run the current pool of tasks until one completes
-                    done, aws = await wait(aws, return_when=FIRST_COMPLETED)
+                    done, self._aws = await wait(self._aws, return_when=FIRST_COMPLETED)
                     for task in done:
                         yield task.result()
             # no more awaitables, then done
-            if not aws and self._tasks.empty():
+            if not self._aws and self._tasks.empty():
                 break
+
+    def cancel_all(self):
+        while not self._tasks.empty():
+            task = self._tasks.get()
+            task.close()
+        for a in self._aws:
+            a.close()

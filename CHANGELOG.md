@@ -6,6 +6,11 @@ This package is currently in 'beta', in that it is in use by several users, but 
 
 No changes since last release.
 
+## [0.1.9] - 2021-11-22
+
+### Added
+  - keystrokes to pause, continue or terminate execution
+
 ## [0.1.8] - 2021-11-17
 
 ### Added
