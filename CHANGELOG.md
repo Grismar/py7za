@@ -6,10 +6,12 @@ This package is currently in 'beta', in that it is in use by several users, but 
 
 No changes since last release.
 
-## [0.1.9] - 2021-11-22
+
+## [0.1.9] - 2021-12-08
 
 ### Added
-  - keystrokes to pause, continue or terminate execution
+  - catch keyboard interrupt and terminate gracefully
+  - match grouping: for pre-defined groups (groups.json could be customised to add groups), matching files will cause files in their groups to be matched as well; for example, when matching `*.shp` (part of the 'ArcGIS shape files' group), other files in that group like `*.shx`, `*.prj` etc. will also be matched  
 
 ## [0.1.8] - 2021-11-17
 

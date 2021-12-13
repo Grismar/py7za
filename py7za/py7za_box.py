@@ -6,17 +6,24 @@ import logging
 from logging import error, warning, info
 from conffu import Config
 from pathlib import Path
-from asyncio import run, sleep, gather
+from asyncio import get_event_loop, sleep, gather
 from py7za import Py7za, AsyncIOPool, available_cpu_count, nice_size
 from subprocess import list2cmdline
 import re
+from json import load
+from json.decoder import JSONDecodeError
+from typing import Optional
 # only used for status
 from zipfile import ZipFile
 
 ARCHIVE_SUFFIXES = ['.zip', '.zipx', '.gz', '.7z', '.s7z', '.lzma', '.lz', '.cab', '.jar', '.war', '.rar']
 
+aiop: Optional[AsyncIOPool] = None
+
 
 async def box(cfg):
+    global aiop
+
     start_time = datetime.now()
     total = 0
     done = False
@@ -87,6 +94,7 @@ async def box(cfg):
     create_folders = cfg['create_folders']
     zip_structure = cfg['zip_structure']
     zip_archives = cfg['zip_archives']
+    match_groups = cfg['match_groups']
     si = cfg['si']
 
     def globber(root, glob_expr):
@@ -99,11 +107,30 @@ async def box(cfg):
                     info(f'Skipping {fn} as it does not match provided regex.')
                     skipped += 1
                     continue
-                if not unbox and not zip_archives and fn.suffix in ARCHIVE_SUFFIXES:
-                    info(f'Skipping {fn} as it is an archive and --zip_archives was not specified.')
-                    skipped += 1
-                    continue
-                if (fn.is_dir() and cfg['match_dir']) or (fn.is_file() and cfg['match_file']):
+                if (fn.is_file() and cfg['match_file']):
+                    if not unbox and not zip_archives and fn.suffix in ARCHIVE_SUFFIXES:
+                        info(f'Skipping {fn} as it is an archive and --zip_archives was not specified.')
+                        skipped += 1
+                        continue
+                    if match_groups and (
+                            (not unbox and fn.suffix in cfg['group_map']) or
+                            (unbox and Path(fn.stem).suffix in cfg['group_map'])
+                    ):
+                        parent, stem, suffix, extra = (fn.parent, fn.stem, fn.suffix, '') \
+                            if not unbox else (fn.parent, Path(fn.stem).stem, Path(fn.stem).suffix, fn.suffix)
+                        matches = []
+                        for suffixes in cfg['group_map'][suffix]:
+                            matches = [
+                                parent / f'{stem}{sf}{extra}'
+                                for sf in suffixes
+                                if (parent / f'{stem}{sf}{extra}').is_file()
+                            ]
+                            if matches:
+                                break
+                        for group_fn in matches:
+                            yield group_fn.relative_to(root).parent, group_fn.name
+                    yield fn.relative_to(root).parent, fn.name
+                elif (fn.is_dir() and cfg['match_dir']):
                     yield fn.relative_to(root).parent, fn.name
 
     def start(py7za):
@@ -128,7 +155,9 @@ async def box(cfg):
             await sleep(0.5)
 
     async def run_all():
-        nonlocal aiop, total, done, total_content_size, total_zip_size, skipped, finished, test, skipped_test
+        nonlocal total, done, total_content_size, total_zip_size, skipped, finished, test, skipped_test
+        global aiop
+
         zippers = []
 
         root = Path(cfg.root).absolute()
@@ -244,6 +273,7 @@ def print_help():
         '-cf/--create_folders      : Recreate folder structure in target path. [True]\n'
         '-l/--log <path>           : Log source, size, target, size as .csv. [None]\n'
         '-el/--error_log <path>    : Log warnings and error messages to file. [None]\n'
+        '-gm/--group_match [bool]  : Group files with grouped suffixes. [True]\n'
         '-md/--match_dir [bool]    : Glob expression(s) should match dirs. [False]\n'
         '-mf/--match_file [bool]   : Glob expression(s) should match files. [True]\n'
         '-p/--parallel <n>         : #Parallel processes to run [0 = available cores]\n'
@@ -281,6 +311,7 @@ CLI_DEFAULTS = {
     'parallel': '0',
     'delete': True,
     'create_folders': True,
+    'match_groups': True,
     'match_dir': False,
     'match_file': True,
     'output': 'd',
@@ -298,18 +329,20 @@ CLI_DEFAULTS = {
 
 
 def cli_entry_point():
+    global aiop
+
     # enable sufficient ansi support on Windows
     if os_name == 'nt':
         from ctypes import windll
         k = windll.kernel32
         k.SetConsoleMode(k.GetStdHandle(-11), 7)
 
-    cfg = Config.startup(defaults=CLI_DEFAULTS, aliases={
+    cfg = Config.startup(defaults=CLI_DEFAULTS, no_compound_keys=True, aliases={
         'h': 'help', 'p': 'parallel', 'cf': 'create_folders', 'md': 'match_dir', 'mf': 'match_file', 'u': 'unbox',
         'unzip': 'unbox', 'r': 'root', 'zs': 'zip_structure', 't': 'target', 'v': 'verbose', '7': '7za', 'g': 'glob',
         'o': 'output', 'w': 'overwrite', 'za': 'zip_archives', 'um': 'unbox_multi', 'l': 'log', 'le': 'log_error',
         'unzip_multi': 'unbox_multi', 'error_log': 'log_error', 'el': 'log_error', 're': 'regex',
-        'regular_expression': 'regex'
+        'regular_expression': 'regex', 'mg': 'match_groups'
     })
 
     if cfg.get_as_type('help', bool, False):
@@ -384,7 +417,26 @@ def cli_entry_point():
     if cfg.overwrite != 's' and not cfg.unbox:
         warning(f'Overwrite mode {cfg.overwrite} passed, but option will have no effect unless unboxing.')
 
-    run(box(cfg))
+    if cfg['match_groups']:
+        groups_file = Path(__file__).parent / 'groups.json'
+        if not groups_file.is_file():
+            warning(f'Group matching specified, but no groups.json found in script installation directory.')
+        else:
+            try:
+                with open(str(groups_file), 'r') as f:
+                    groups = load(f)
+            except (IOError, JSONDecodeError) as e:
+                error(f'Error reading groups.json for group matching: {e}')
+            cfg['group_map'] = {
+                suffix: [
+                    [other for other in g if other != suffix] for g in groups.values() if suffix in g
+                ] for suffix in [s for v in groups.values() for s in v]
+            }
+
+    try:
+        get_event_loop().run_until_complete(box(cfg))
+    except KeyboardInterrupt:
+        print('\nExecution interrupted, cleaning up...')
 
 
 if __name__ == '__main__':
