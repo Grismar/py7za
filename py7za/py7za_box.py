@@ -6,7 +6,7 @@ import logging
 from logging import error, warning, info
 from conffu import Config
 from pathlib import Path
-from asyncio import get_event_loop, sleep, gather
+from asyncio import get_event_loop, sleep, gather, Task
 from py7za import Py7za, AsyncIOPool, available_cpu_count, nice_size
 from subprocess import list2cmdline
 import re
@@ -87,6 +87,13 @@ async def box(cfg):
     test = cfg['test'] if 'test' in cfg else False
     skipped_test = 0
 
+    if cfg['match_groups']:
+        groups_file = Path(__file__).parent / 'groups.json'
+        if not groups_file.is_file():
+            warning(f'Group matching specified, but no groups.json found in script installation directory.')
+        else:
+            cfg['group_map'] = group_map(groups_file, cfg)
+
     unbox = cfg['unbox']
     from_into = "from" if unbox else "into"
     unbox_multi = cfg['unbox_multi']
@@ -163,82 +170,85 @@ async def box(cfg):
         root = Path(cfg.root).absolute()
         target = Path(cfg.target).absolute() if 'target' in cfg else root
         n = 0
-        for sub_path, fn in globber(cfg.root, cfg.glob):
-            if print_result and n % 100 == 0 and not test:
-                stdout.write(f'\x1b[2K\rMatching [{n}] ... ')
-            n += 1
-            if create_folders and not test:
-                (target / sub_path).mkdir(parents=True, exist_ok=True)
-            if not unbox:
-                target_path = target / sub_path / fn if create_folders else target / fn
-                if zip_structure:
-                    content = sub_path / fn
-                    wd = str(root)
-                else:
-                    content = root / sub_path / fn
-                    wd = '.'
-                if not test:
-                    zippers.append(
-                        Py7za(f'a "{target_path}{cfg.suffix}" "{content}" {cli_options}',
-                              on_start=start, working_dir=wd))
-                else:
-                    skipped_test += 1
-                    print(f'TEST in "{wd}": 7za.exe a "{target_path}{cfg.suffix}" "{content}" {cli_options}')
-            else:
-                archive = root / sub_path / fn
-                if not unbox_multi and (
-                        (archive.suffix == '.zip' and len(ZipFile(archive).filelist) > 1) or
-                        ((await Py7za.list_archive(str(archive), meta_data_only=True))[2] > 1)):
-                    info(f'Skipping {archive} as it has multiple files and --unbox_multi was not specified.')
-                    skipped += 1
-                    continue
-                target_path = target / sub_path if create_folders else target
-                if not test:
-                    zippers.append(Py7za(f'x "{archive}" "-o{target_path}" {cli_options}', start))
-                else:
-                    skipped_test += 1
-                    print(f'TEST: 7za.exe x "{archive}" "-o{target_path}" {cli_options}')
-        if print_result:
-            stdout.write(f'\x1b[2K\rMatched {n} object(s), '
-                         f'start processing in up to {aiop.size} parallel processes ...\n')
-        total = len(zippers)
-        async for py7za in aiop.arun_many(zippers):
-            finished += 1
-            if py7za.return_code > 0:
-                error(f'Return code {py7za.return_code} from: {list2cmdline([py7za.executable_7za, *py7za.arguments])}'
-                      f'\n{py7za.errors.decode()}')
-                continue
-            fn = py7za.arguments[1]
-            pfn = Path(fn)
-            if not pfn.is_file():
-                error(f'Archive file {fn} not found.')
-                continue
-            if print_result or update_status or log:
-                if pfn.suffix == '.zip':
-                    total_content_size += (cs := sum([zip_info.file_size for zip_info in ZipFile(fn).filelist]))
-                else:
-                    total_content_size += (cs := (await Py7za.list_archive(fn, meta_data_only=True))[0])
-                total_zip_size += (zs := stat(fn).st_size)
-                if log:
-                    with open(log, 'a') as lf:
-                        lf.write(f'{datetime.strftime(datetime.now(timezone.utc).astimezone(), "%Y-%m-%d %H:%M:%S%z")},'
-                                 f'{fn},{nice_size(cs, si)},{cs},{nice_size(zs, si)},{zs}\n')
-                if print_result:
-                    if list_status:
-                        stdout.write(f'\x1b[2K\r'
-                                     f'{datetime.strftime(datetime.now(), "%H:%M:%S")}  '
-                                     f'{nice_size(cs, si)} {from_into} {nice_size(zs, si)} {fn}\n')
-                        stdout.write(f'Total: {finished} / {total} '
-                                     f'[{nice_size(total_content_size, si)} '
-                                     f'{from_into} {nice_size(total_zip_size, si)}] ({current - finished} running)')
+        try:
+            for sub_path, fn in globber(cfg.root, cfg.glob):
+                if print_result and n % 100 == 0 and not test:
+                    stdout.write(f'\x1b[2K\rMatching [{n}] ... ')
+                n += 1
+                if create_folders and not test:
+                    (target / sub_path).mkdir(parents=True, exist_ok=True)
+                if not unbox:
+                    target_path = target / sub_path / fn if create_folders else target / fn
+                    if zip_structure:
+                        content = sub_path / fn
+                        wd = str(root)
                     else:
-                        stdout.write(f'{datetime.strftime(datetime.now(), "%H:%M:%S")}  '
-                                     f'{nice_size(cs, si)} {from_into} {nice_size(zs, si)} {fn}\n')
-                    stdout.flush()
-            if unbox and delete:
-                os_remove(py7za.arguments[1])
-            running.remove(py7za)
-        done = True
+                        content = root / sub_path / fn
+                        wd = '.'
+                    if not test:
+                        zippers.append(
+                            Py7za(f'a "{target_path}{cfg.suffix}" "{content}" {cli_options}',
+                                  on_start=start, working_dir=wd))
+                    else:
+                        skipped_test += 1
+                        print(f'TEST in "{wd}": 7za.exe a "{target_path}{cfg.suffix}" "{content}" {cli_options}')
+                else:
+                    archive = root / sub_path / fn
+                    if not unbox_multi and (
+                            (archive.suffix == '.zip' and len(ZipFile(archive).filelist) > 1) or
+                            ((await Py7za.list_archive(str(archive), meta_data_only=True))[2] > 1)):
+                        info(f'Skipping {archive} as it has multiple files and --unbox_multi was not specified.')
+                        skipped += 1
+                        continue
+                    target_path = target / sub_path if create_folders else target
+                    if not test:
+                        zippers.append(Py7za(f'x "{archive}" "-o{target_path}" {cli_options}', start))
+                    else:
+                        skipped_test += 1
+                        print(f'TEST: 7za.exe x "{archive}" "-o{target_path}" {cli_options}')
+            if print_result:
+                stdout.write(f'\x1b[2K\rMatched {n} object(s), '
+                             f'start processing in up to {aiop.size} parallel processes ...\n')
+            total = len(zippers)
+            async for py7za in aiop.arun_many(zippers):
+                finished += 1
+                if py7za.return_code > 0:
+                    error(f'Return code {py7za.return_code} from: {list2cmdline([py7za.executable_7za, *py7za.arguments])}'
+                          f'\n{py7za.errors.decode()}')
+                    continue
+                fn = py7za.arguments[1]
+                pfn = Path(fn)
+                if not pfn.is_file():
+                    error(f'Archive file {fn} not found.')
+                    continue
+                if print_result or update_status or log:
+                    if pfn.suffix == '.zip':
+                        total_content_size += (cs := sum([zip_info.file_size for zip_info in ZipFile(fn).filelist]))
+                    else:
+                        total_content_size += (cs := (await Py7za.list_archive(fn, meta_data_only=True))[0])
+                    total_zip_size += (zs := stat(fn).st_size)
+                    if log:
+                        with open(log, 'a') as lf:
+                            lf.write(f'{datetime.strftime(datetime.now(timezone.utc).astimezone(), "%Y-%m-%d %H:%M:%S%z")},'
+                                     f'{fn},{nice_size(cs, si)},{cs},{nice_size(zs, si)},{zs}\n')
+                    if print_result:
+                        if list_status:
+                            stdout.write(f'\x1b[2K\r'
+                                         f'{datetime.strftime(datetime.now(), "%H:%M:%S")}  '
+                                         f'{nice_size(cs, si)} {from_into} {nice_size(zs, si)} {fn}\n')
+                            stdout.write(f'Total: {finished} / {total} '
+                                         f'[{nice_size(total_content_size, si)} '
+                                         f'{from_into} {nice_size(total_zip_size, si)}] ({current - finished} running)')
+                        else:
+                            stdout.write(f'{datetime.strftime(datetime.now(), "%H:%M:%S")}  '
+                                         f'{nice_size(cs, si)} {from_into} {nice_size(zs, si)} {fn}\n')
+                        stdout.flush()
+                if unbox and delete:
+                    os_remove(py7za.arguments[1])
+                running.remove(py7za)
+            done = True
+        except (KeyboardInterrupt, RuntimeError):
+            pass
 
     if update_status:
         await gather(run_all(), print_status())
@@ -274,6 +284,7 @@ def print_help():
         '-l/--log <path>           : Log source, size, target, size as .csv. [None]\n'
         '-el/--error_log <path>    : Log warnings and error messages to file. [None]\n'
         '-gm/--group_match [bool]  : Group files with grouped suffixes. [True]\n'
+        '-ga/--group_add <path>    : Path to extra .json group definitions. [None]\n'
         '-md/--match_dir [bool]    : Glob expression(s) should match dirs. [False]\n'
         '-mf/--match_file [bool]   : Glob expression(s) should match files. [True]\n'
         '-p/--parallel <n>         : #Parallel processes to run [0 = available cores]\n'
@@ -303,7 +314,8 @@ def print_help():
         'Unzip all .csv.zip from C:/Archive and sub-folders to C:/Data:\n'
         '   py7za-box **/*.csv.zip --unbox --root C:/Archive -t C:/Data\n'
         'Zip folders named `Photo*` individually using maximum compression:\n'
-        '   py7za-box Photo* -r "C:/My Photos" -md -mf 0 -t C:/Archive -7 "-mx9"\n\n'
+        '   py7za-box Photo* -r "C:/My Photos" -md -mf 0 -t C:/Archive -7 "-mx9"\n'
+        '\nNote that you can gracefully interrupt a (un)boxing run with Ctrl+C.\n'
     )
 
 
@@ -328,6 +340,29 @@ CLI_DEFAULTS = {
 }
 
 
+def group_map(fn, cfg):
+    try:
+        with open(str(fn), 'r') as f:
+            groups = load(f)
+    except (IOError, JSONDecodeError) as e:
+        error(f'Error reading groups.json for group matching: {e}')
+    if 'group_add' in cfg:
+        if not Path(cfg['group_add'].is_file()):
+            warning(f'Additional group definitions specified, file was not found: {cfg["group_add"]}')
+        try:
+            with open(str(cfg['group_add']), 'r') as f:
+                added_groups = load(f)
+            groups = groups | added_groups
+        except (IOError, JSONDecodeError) as e:
+            error(f'Error reading {cfg["group_add"]} additional group definitions: {e}')
+
+    return {
+        suffix: [
+            [other for other in g if other != suffix] for g in groups.values() if suffix in g
+        ] for suffix in [s for v in groups.values() for s in v]
+    }
+
+
 def cli_entry_point():
     global aiop
 
@@ -342,7 +377,7 @@ def cli_entry_point():
         'unzip': 'unbox', 'r': 'root', 'zs': 'zip_structure', 't': 'target', 'v': 'verbose', '7': '7za', 'g': 'glob',
         'o': 'output', 'w': 'overwrite', 'za': 'zip_archives', 'um': 'unbox_multi', 'l': 'log', 'le': 'log_error',
         'unzip_multi': 'unbox_multi', 'error_log': 'log_error', 'el': 'log_error', 're': 'regex',
-        'regular_expression': 'regex', 'mg': 'match_groups'
+        'regular_expression': 'regex', 'mg': 'match_groups', 'ga': 'group_add'
     })
 
     if cfg.get_as_type('help', bool, False):
@@ -417,26 +452,14 @@ def cli_entry_point():
     if cfg.overwrite != 's' and not cfg.unbox:
         warning(f'Overwrite mode {cfg.overwrite} passed, but option will have no effect unless unboxing.')
 
-    if cfg['match_groups']:
-        groups_file = Path(__file__).parent / 'groups.json'
-        if not groups_file.is_file():
-            warning(f'Group matching specified, but no groups.json found in script installation directory.')
-        else:
-            try:
-                with open(str(groups_file), 'r') as f:
-                    groups = load(f)
-            except (IOError, JSONDecodeError) as e:
-                error(f'Error reading groups.json for group matching: {e}')
-            cfg['group_map'] = {
-                suffix: [
-                    [other for other in g if other != suffix] for g in groups.values() if suffix in g
-                ] for suffix in [s for v in groups.values() for s in v]
-            }
-
+    loop = get_event_loop()
     try:
-        get_event_loop().run_until_complete(box(cfg))
+        loop.run_until_complete(box(cfg))
     except KeyboardInterrupt:
         print('\nExecution interrupted, cleaning up...')
+    finally:
+        loop.run_until_complete(loop.shutdown_asyncgens())
+        # not closing the loop, to avoid further exceptions - we're on the way out now
 
 
 if __name__ == '__main__':

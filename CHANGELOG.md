@@ -7,11 +7,13 @@ This package is currently in 'beta', in that it is in use by several users, but 
 No changes since last release.
 
 
-## [0.1.9] - 2021-12-08
+## [0.1.9] - 2021-12-14
 
 ### Added
-  - catch keyboard interrupt and terminate gracefully
-  - match grouping: for pre-defined groups (groups.json could be customised to add groups), matching files will cause files in their groups to be matched as well; for example, when matching `*.shp` (part of the 'ArcGIS shape files' group), other files in that group like `*.shx`, `*.prj` etc. will also be matched  
+  - catch keyboard interrupt (Ctrl+C / Ctrl+Break) and terminate gracefully;
+  - match grouping: for pre-defined groups, matching files will cause files in their groups to be matched as well; for example, when matching `*.shp` (part of the 'ArcGIS shape files' group), other files in that group like `*.shx`, `*.prj` etc. will also be matched;
+  - alternate groups can be extended by providing an alternate `groups.json` `-ga` / `--group_add <path to .json>` - you can eliminate existing groups by redefining them as empty lists; 
+  - pre-defined groups were defined for arcgis shape files, mapinfo tab files, and mapinfo mid/mif files.
 
 ## [0.1.8] - 2021-11-17
 
@@ -165,6 +167,7 @@ First release in the wild.
   - Cloned and adapted from python_package_template.
 
 [Unreleased]: /../../../
+[0.1.9]: /../../../tags/0.1.9
 [0.1.8]: /../../../tags/0.1.8
 [0.1.7]: /../../../tags/0.1.7
 [0.1.6]: /../../../tags/0.1.6

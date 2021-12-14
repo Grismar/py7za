@@ -158,6 +158,40 @@ py7za-box */* --match_dir --match_file false
 py7za-box */*.7z --unbox --unbox_multi
 ```
 
+### Matching groups of files
+
+Some files are really only meaningful when they are available as a group. For example, an ArcGIS shape file `.shp` doesn't work correctly without its accompanying `.shx`, `.dbf`, etc. To help with this, `py7za-box ` automatically matches other files in a group if a single file is matched. For example, if you were to run this:
+```commandline
+py7za-box *.shp *.txt
+```
+It would proceed to box up all files in the current folder with the `.shp` suffix, but also any other files grouped with it. This doesn't affect other matches, so since `.txt` isn't a part of any group, those files still get matched normally. Also note that although files are boxed up together, they are still archived individually. The grouping doesn't put the files together in single archives, it just archives all of them individually.
+
+Similarly, to unbox all shape files and their siblings, you would:
+```commandline
+py7za-box *.shp.7z --unbox
+```
+And `py7za-box` will match files in the group - as long as they have been boxed up using the same format (i.e. if you were to mix `.7z` and `.zip` when boxing them up for some reason, only the matching ones will be unboxed).
+
+If you have additional groups that you want treated like this, you can provide them in .json format:
+```json
+{
+  "my kind of files": [".ext1", ".ext2", ".etc"],
+  "another kind of files": [".ext2", ".ext3", ".etc"]
+}
+```
+Once you have a .json with your groups defined, you can get `py7za-box` apply them using:
+```commandline
+py7za-box *.ext1 -ga my_groups.json
+```
+
+Just be aware that you need to use unique keys and that reusing existing keys from `groups.json` would override them as well. Also, if multiple groups contain the same extension, the first group that has the extension of a matched file will be used. So in the above example, if you're matching `*.ext2` files, only matches in the first group would also be matched, but if you're matching `*.ext3`, only matches in the second group would also match. 
+
+If you want to list predefined keys in `groups.json` from the package, you can run:
+```commandline
+type <path to your site-packages>\py7za\groups.json
+```
+(on Windows, use `cat` or an editor on Linux)
+
 ### Locked files
 
 If you have files open in a program that locks the file for reading or writing, `py7za-box` may file to archive them, or remove them after archiving. A warning or error will be logged (and it's recommended you log to file with `--log_error <path>` for easy review). 
