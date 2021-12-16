@@ -1,5 +1,5 @@
 from typing import Union, Awaitable, Iterable, Generator, Any, Optional
-from asyncio import wait, FIRST_COMPLETED, Queue
+from asyncio import wait, FIRST_COMPLETED, Queue, QueueEmpty
 
 
 class AsyncIOPool:
@@ -53,7 +53,7 @@ class AsyncIOPool:
                 self._aws.add(await self._tasks.get())
             else:
                 if self._aws:
-                    # run the current pool of tasks until one completes
+                    # run the current pool of tasks until one or more complete
                     done, self._aws = await wait(self._aws, return_when=FIRST_COMPLETED)
                     for task in done:
                         yield task.result()
@@ -63,7 +63,10 @@ class AsyncIOPool:
 
     def cancel_all(self):
         while not self._tasks.empty():
-            task = self._tasks.get()
+            try:
+                task = self._tasks.get_nowait()
+            except QueueEmpty:
+                break
             task.close()
         for a in self._aws:
-            a.close()
+            a.cancel()

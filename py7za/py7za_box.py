@@ -273,7 +273,7 @@ def print_help():
         'containing the originals, or does the reverse by "unboxing" the archives.\n'
         'Py7za uses 7za.exe, more information on the project page.\n'
         '\n'
-        'Usage: `py7za-box <glob expression(s)> [options]`\n'
+        'Usage: `py7za-box | box <glob expression(s)> [options]`\n'
         '\n'
         '<glob expression(s)>      : Glob expression(s) like "**/*.csv". (required)\n'
         '                            Add quotes if your expression contains spaces.\n'
@@ -313,8 +313,9 @@ def print_help():
         '   py7za-box *.csv --root C:/Data --target C:/Archive\n'
         'Unzip all .csv.zip from C:/Archive and sub-folders to C:/Data:\n'
         '   py7za-box **/*.csv.zip --unbox --root C:/Archive -t C:/Data\n'
+        '   unbox **/*.csv.zip --root C:/Archive -t C:/Data\n'
         'Zip folders named `Photo*` individually using maximum compression:\n'
-        '   py7za-box Photo* -r "C:/My Photos" -md -mf 0 -t C:/Archive -7 "-mx9"\n'
+        '   box Photo* -r "C:/My Photos" -md -mf 0 -t C:/Archive -7 "-mx9"\n'
         '\nNote that you can gracefully interrupt a (un)boxing run with Ctrl+C.\n'
     )
 
@@ -363,7 +364,7 @@ def group_map(fn, cfg):
     }
 
 
-def cli_entry_point():
+def cli_entry_point(unbox=False):
     global aiop
 
     # enable sufficient ansi support on Windows
@@ -379,6 +380,11 @@ def cli_entry_point():
         'unzip_multi': 'unbox_multi', 'error_log': 'log_error', 'el': 'log_error', 're': 'regex',
         'regular_expression': 'regex', 'mg': 'match_groups', 'ga': 'group_add'
     })
+
+    if unbox:
+        if 'unbox' in cfg.arguments and not cfg.unbox:
+            warning('"--unbox False" option passed to `unbox` ignored, unboxing.')
+        cfg.unbox = True
 
     if cfg.get_as_type('help', bool, False):
         print_help()
@@ -460,6 +466,14 @@ def cli_entry_point():
     finally:
         loop.run_until_complete(loop.shutdown_asyncgens())
         # not closing the loop, to avoid further exceptions - we're on the way out now
+
+
+def cli_box_entry_point():
+    cli_entry_point()
+
+
+def cli_unbox_entry_point():
+    cli_entry_point(unbox=True)
 
 
 if __name__ == '__main__':

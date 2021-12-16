@@ -47,7 +47,11 @@ setup(
     },
     python_requires='>=3.8',
     entry_points={
-        'console_scripts': ['py7za-box=py7za.py7za_box:cli_entry_point'],
+        'console_scripts': [
+            'py7za-box=py7za.py7za_box:cli_entry_point',
+            'box=py7za.py7za_box:cli_box_entry_point',
+            'unbox=py7za.py7za_box:cli_unbox_entry_point',
+        ],
     },
     include_package_data=True,
     package_data={'': ['bin/7za.exe', 'bin/7za-license.txt', 'bin/GNU_LGPL.txt']},
