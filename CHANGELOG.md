@@ -6,8 +6,7 @@ This package is currently in 'beta', in that it is in use by several users, but 
 
 No changes since last release.
 
-
-## [0.2.1] - 2022-01-13
+## [0.2.2] - 2022-01-13
 
 ### Added
   - add documentation with MkDocs on https://py7za.readthedocs.io;
@@ -18,6 +17,7 @@ No changes since last release.
 
 ### Fixed
   - avoid errors reporting missing files when files that are part of a group also match the main glob; this caused no actual mistakes in boxing, but the error messages themselves were in error.
+  - build information for MkDocs 
 
 ## [0.2.0] - 2021-12-16
 
