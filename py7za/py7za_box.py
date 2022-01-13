@@ -6,7 +6,7 @@ import logging
 from logging import error, warning, info
 from conffu import Config
 from pathlib import Path
-from asyncio import get_event_loop, sleep, gather, Task
+from asyncio import get_event_loop, sleep, gather
 from py7za import Py7za, AsyncIOPool, available_cpu_count, nice_size
 from subprocess import list2cmdline
 import re
@@ -46,7 +46,7 @@ async def box(cfg):
     parallel = 0
     try:
         if isinstance(cfg['parallel'], str) and cfg['parallel'] and cfg['parallel'][-1].lower() == 'x':
-            parallel = int(cfg['parallel'][:-1]) * available_cpu_count()
+            parallel = int(float(cfg['parallel'][:-1]) * available_cpu_count())
         else:
             parallel = int(cfg['parallel'])
     except ValueError:
@@ -54,6 +54,10 @@ async def box(cfg):
         exit(1)
     if parallel == 0:
         parallel = available_cpu_count()
+    elif parallel < 0:
+        parallel = available_cpu_count() + parallel
+    if parallel < 1:
+        parallel = 1
     aiop = AsyncIOPool(pool_size=parallel)
 
     cli_options = '-y '
@@ -98,7 +102,7 @@ async def box(cfg):
     from_into = "from" if unbox else "into"
     unbox_multi = cfg['unbox_multi']
     delete = cfg['delete']
-    create_folders = cfg['create_folders']
+    create_dirs = cfg['create_dirs']
     zip_structure = cfg['zip_structure']
     zip_archives = cfg['zip_archives']
     match_groups = cfg['match_groups']
@@ -106,6 +110,7 @@ async def box(cfg):
 
     def globber(root, glob_expr):
         nonlocal skipped, regex
+        group_results = set()
         if not isinstance(glob_expr, list):
             glob_expr = [glob_expr]
         for ge in glob_expr:
@@ -119,24 +124,28 @@ async def box(cfg):
                         info(f'Skipping {fn} as it is an archive and --zip_archives was not specified.')
                         skipped += 1
                         continue
-                    if match_groups and (
+                    if (fn.relative_to(root).parent, fn.name) not in group_results:
+                        if match_groups and (
                             (not unbox and fn.suffix in cfg['group_map']) or
                             (unbox and Path(fn.stem).suffix in cfg['group_map'])
-                    ):
-                        parent, stem, suffix, extra = (fn.parent, fn.stem, fn.suffix, '') \
-                            if not unbox else (fn.parent, Path(fn.stem).stem, Path(fn.stem).suffix, fn.suffix)
-                        matches = []
-                        for suffixes in cfg['group_map'][suffix]:
-                            matches = [
-                                parent / f'{stem}{sf}{extra}'
-                                for sf in suffixes
-                                if (parent / f'{stem}{sf}{extra}').is_file()
-                            ]
-                            if matches:
-                                break
-                        for group_fn in matches:
-                            yield group_fn.relative_to(root).parent, group_fn.name
-                    yield fn.relative_to(root).parent, fn.name
+                        ):
+                            parent, stem, suffix, extra = (fn.parent, fn.stem, fn.suffix, '') \
+                                if not unbox else (fn.parent, Path(fn.stem).stem, Path(fn.stem).suffix, fn.suffix)
+                            matches = []
+                            for suffixes in cfg['group_map'][suffix]:
+                                matches = [
+                                    parent / f'{stem}{sf}{extra}'
+                                    for sf in suffixes
+                                    if (parent / f'{stem}{sf}{extra}').is_file()
+                                ]
+                                if matches:
+                                    break
+                            for group_fn in matches:
+                                parent, name = group_fn.relative_to(root).parent, group_fn.name
+                                if (parent, name) not in group_results:
+                                    group_results.add((parent, name))
+                                    yield parent, name
+                        yield fn.relative_to(root).parent, fn.name
                 elif (fn.is_dir() and cfg['match_dir']):
                     yield fn.relative_to(root).parent, fn.name
 
@@ -175,10 +184,10 @@ async def box(cfg):
                 if print_result and n % 100 == 0 and not test:
                     stdout.write(f'\x1b[2K\rMatching [{n}] ... ')
                 n += 1
-                if create_folders and not test:
+                if create_dirs and not test:
                     (target / sub_path).mkdir(parents=True, exist_ok=True)
                 if not unbox:
-                    target_path = target / sub_path / fn if create_folders else target / fn
+                    target_path = target / sub_path / fn if create_dirs else target / fn
                     if zip_structure:
                         content = sub_path / fn
                         wd = str(root)
@@ -200,7 +209,7 @@ async def box(cfg):
                         info(f'Skipping {archive} as it has multiple files and --unbox_multi was not specified.')
                         skipped += 1
                         continue
-                    target_path = target / sub_path if create_folders else target
+                    target_path = target / sub_path if create_dirs else target
                     if not test:
                         zippers.append(Py7za(f'x "{archive}" "-o{target_path}" {cli_options}', start))
                     else:
@@ -213,7 +222,8 @@ async def box(cfg):
             async for py7za in aiop.arun_many(zippers):
                 finished += 1
                 if py7za.return_code > 0:
-                    error(f'Return code {py7za.return_code} from: {list2cmdline([py7za.executable_7za, *py7za.arguments])}'
+                    error(f'Return code {py7za.return_code}'
+                          f' from: {list2cmdline([py7za.executable_7za, *py7za.arguments])}'
                           f'\n{py7za.errors.decode()}')
                     continue
                 fn = py7za.arguments[1]
@@ -229,8 +239,9 @@ async def box(cfg):
                     total_zip_size += (zs := stat(fn).st_size)
                     if log:
                         with open(log, 'a') as lf:
-                            lf.write(f'{datetime.strftime(datetime.now(timezone.utc).astimezone(), "%Y-%m-%d %H:%M:%S%z")},'
-                                     f'{fn},{nice_size(cs, si)},{cs},{nice_size(zs, si)},{zs}\n')
+                            lf.write(
+                                f'{datetime.strftime(datetime.now(timezone.utc).astimezone(), "%Y-%m-%d %H:%M:%S%z")},'
+                                f'{fn},{nice_size(cs, si)},{cs},{nice_size(zs, si)},{zs}\n')
                     if print_result:
                         if list_status:
                             stdout.write(f'\x1b[2K\r'
@@ -273,22 +284,22 @@ def print_help():
         'containing the originals, or does the reverse by "unboxing" the archives.\n'
         'Py7za uses 7za.exe, more information on the project page.\n'
         '\n'
-        'Usage: `py7za-box | box <glob expression(s)> [options]`\n'
+        'Usage: `py7za-box | box <glob pattern(s)> [options]`\n'
         '\n'
-        '<glob expression(s)>      : Glob expression(s) like "**/*.csv". (required)\n'
-        '                            Add quotes if your expression contains spaces.\n'
+        '<glob pattern(s)>         : Glob pattern(s) like "**/*.csv". (required)\n'
+        '                            Add quotes if your pattern contains spaces.\n'
         'Options:\n'
         '-h/--help                 : This text.\n'
         '-d/--delete               : Remove the source after (un)boxing. [True]\n'
-        '-cf/--create_folders      : Recreate folder structure in target path. [True]\n'
+        '-cd/--create_dirs         : Recreate dir structure in target path. [True]\n'
         '-l/--log <path>           : Log source, size, target, size as .csv. [None]\n'
         '-el/--error_log <path>    : Log warnings and error messages to file. [None]\n'
         '-gm/--group_match [bool]  : Group files with grouped suffixes. [True]\n'
         '-ga/--group_add <path>    : Path to extra .json group definitions. [None]\n'
-        '-md/--match_dir [bool]    : Glob expression(s) should match dirs. [False]\n'
-        '-mf/--match_file [bool]   : Glob expression(s) should match files. [True]\n'
+        '-md/--match_dir [bool]    : Glob pattern(s) should match dirs. [False]\n'
+        '-mf/--match_file [bool]   : Glob pattern(s) should match files. [True]\n'
         '-p/--parallel <n>         : #Parallel processes to run [0 = available cores]\n'
-        '-r/--root <path>          : Path glob expression(s) are relative to. ["."]\n'
+        '-r/--root <path>          : Path glob pattern(s) are relative to. ["."]\n'
         '-re/--regex <expr>        : Regex path of globbed files must match. [None]\n'
         '-t/--target <path>        : Root path for output. ["" / in-place]\n'
         '-u/--unbox/--unzip        : Unzip instead of zip (glob to match archives).\n'
@@ -300,21 +311,21 @@ def print_help():
         '                            Note: d/l/v do not work for all archive types.\n'
         '-si                       : Whether to use SI units for file sizes. [False]\n'
         '--test                    : Test mode - no files are changed. [False]\n'
-        '-w/overwrite [a/s/u/t]    : Used overwrite mode when unboxing. [s]\n'
+        '-w/--overwrite [a/s/u/t]  : Used overwrite mode when unboxing. [s]\n'
         '                            a:all, s:skip, u:rename new, t:rename existing.\n'
         '-za/--zip_archives [bool] : Whether to zip matched archives (again). [False]\n'
-        '-zs/--zip_structure [bool]: Root sub-folder structure is archived. [False]\n'
-        '-7/--7za                  : CLI arguments passed to 7za after scripted ones.\n'
+        '-zs/--zip_structure [bool]: Root subdirectory structure is archived. [False]\n'
+        '-7/--7za <arguments>      : CLI arguments passed to 7za after scripted ones.\n'
         '                            Add quotes if passing more than one argument.\n'
         '\n'
         'Examples:\n'
         '\n'
         'Zip all .csv files in C:/Data and put the archives in C:/Archive:\n'
         '   py7za-box *.csv --root C:/Data --target C:/Archive\n'
-        'Unzip all .csv.zip from C:/Archive and sub-folders to C:/Data:\n'
+        'Unzip all .csv.zip from C:/Archive and subdirectories to C:/Data:\n'
         '   py7za-box **/*.csv.zip --unbox --root C:/Archive -t C:/Data\n'
         '   unbox **/*.csv.zip --root C:/Archive -t C:/Data\n'
-        'Zip folders named `Photo*` individually using maximum compression:\n'
+        'Zip directories named `Photo*` individually using maximum compression:\n'
         '   box Photo* -r "C:/My Photos" -md -mf 0 -t C:/Archive -7 "-mx9"\n'
         '\nNote that you can gracefully interrupt a (un)boxing run with Ctrl+C.\n'
     )
@@ -323,7 +334,7 @@ def print_help():
 CLI_DEFAULTS = {
     'parallel': '0',
     'delete': True,
-    'create_folders': True,
+    'create_dirs': True,
     'match_groups': True,
     'match_dir': False,
     'match_file': True,
@@ -356,7 +367,8 @@ def group_map(fn, cfg):
             groups = groups | added_groups
         except (IOError, JSONDecodeError) as e:
             error(f'Error reading {cfg["group_add"]} additional group definitions: {e}')
-
+    elif 'groups' in cfg:
+        groups = groups | cfg['groups']
     return {
         suffix: [
             [other for other in g if other != suffix] for g in groups.values() if suffix in g
@@ -374,11 +386,12 @@ def cli_entry_point(unbox=False):
         k.SetConsoleMode(k.GetStdHandle(-11), 7)
 
     cfg = Config.startup(defaults=CLI_DEFAULTS, no_compound_keys=True, aliases={
-        'h': 'help', 'p': 'parallel', 'cf': 'create_folders', 'md': 'match_dir', 'mf': 'match_file', 'u': 'unbox',
+        'h': 'help', 'p': 'parallel', 'cd': 'create_dirs', 'md': 'match_dir', 'mf': 'match_file', 'u': 'unbox',
         'unzip': 'unbox', 'r': 'root', 'zs': 'zip_structure', 't': 'target', 'v': 'verbose', '7': '7za', 'g': 'glob',
         'o': 'output', 'w': 'overwrite', 'za': 'zip_archives', 'um': 'unbox_multi', 'l': 'log', 'le': 'log_error',
         'unzip_multi': 'unbox_multi', 'error_log': 'log_error', 'el': 'log_error', 're': 'regex',
-        'regular_expression': 'regex', 'mg': 'match_groups', 'ga': 'group_add'
+        'regular_expression': 'regex', 'mg': 'match_groups', 'ga': 'group_add', 'cf': 'create_dirs',
+        'create_folders': 'create_dirs'
     })
 
     if unbox:
@@ -391,7 +404,7 @@ def cli_entry_point(unbox=False):
         exit(0)
 
     if len(cfg.arguments['']) < 2 and 'glob' not in cfg:
-        error('Missing required argument glob expression(s), e.g. `py7za-box *.csv [options]`.')
+        error('Missing required argument glob pattern(s), e.g. `py7za-box *.csv [options]`.')
         print_help()
         exit(1)
     else:
@@ -406,9 +419,9 @@ def cli_entry_point(unbox=False):
         error(f'The provided target directory "{cfg.target}" was not found.')
         exit(2)
 
-    if cfg.unbox and cfg.create_folders and 'target' in cfg and target is not True:
+    if cfg.unbox and cfg.create_dirs and 'target' in cfg and target is not True:
         warning(f'When unboxing to a target location (not in-place), original structure cannot be restored '
-                f'unless sub-folder from root were included when the archives were created.')
+                f'unless subdirectory from root were included when the archives were created.')
 
     if cfg.zip_structure and cfg.unbox:
         warning(f'The --zip_structure option was specified, but does nothing when unboxing and will be ignored.')
@@ -423,8 +436,8 @@ def cli_entry_point(unbox=False):
             # set unbox to true if only unbox_multi was provided
             cfg.unbox = True
 
-    if cfg.zip_structure and cfg.create_folders:
-        warning(f'Keeping sub-folders from root in archives, as well creating the folder structure in the '
+    if cfg.zip_structure and cfg.create_dirs:
+        warning(f'Keeping subdirectories from root in archives, as well creating the directory structure in the '
                 f'target location may produce unexpected results.')
 
     output_modes = {

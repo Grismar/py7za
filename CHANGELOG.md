@@ -7,16 +7,28 @@ This package is currently in 'beta', in that it is in use by several users, but 
 No changes since last release.
 
 
+## [0.2.1] - 2022-01-13
+
+### Added
+  - add documentation with MkDocs on https://py7za.readthedocs.io;
+  - add 'groups' option to configuration to allow group definition in application configuration file.
+
+### Changed
+  - rename `create_folders` to `create_dirs` for consistency; `create_folders` still works as an alias, but is phased out of the documentation as well.
+
+### Fixed
+  - avoid errors reporting missing files when files that are part of a group also match the main glob; this caused no actual mistakes in boxing, but the error messages themselves were in error.
+
 ## [0.2.0] - 2021-12-16
 
 This version is intended for broader release and testing, however still in beta.
 
-## Added
+### Added
   - `box` as a standard alias for `py7za-box`;
   - `unbox` as a standard alias for `py7za-box` with `--unbox` as a forced option;
   - unit tests for `AsyncIOPool` and `nice_size`.
 
-## Fixed
+### Fixed
   - `AsyncIOPool.cancel_all()` would attempt to `close` tasks that hadn't started yet, instead of `cancel`-ling them.
 
 ## [0.1.9] - 2021-12-14
@@ -179,6 +191,7 @@ First release in the wild.
   - Cloned and adapted from python_package_template.
 
 [Unreleased]: /../../../
+[0.2.1]: /../../../tags/0.2.1
 [0.2.0]: /../../../tags/0.2.0
 [0.1.9]: /../../../tags/0.1.9
 [0.1.8]: /../../../tags/0.1.8

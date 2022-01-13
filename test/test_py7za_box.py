@@ -32,7 +32,7 @@ class TestPy7zaBox(unittest.IsolatedAsyncioTestCase):
             f.write('X,Y,Z\n0,0,0\n')
         with open('data/source/sub3/y3.csv', 'w') as f:
             f.write('X,Y,Z\n0,0,0\n')
-        # file easily mistaken for a folder
+        # file easily mistaken for a directory
         with open('data/source/sub4', 'w') as f:
             f.write('X,Y,Z\n0,0,0\n')
         with open('data/source/sub/subsub/z.csv', 'w') as f:
@@ -72,32 +72,32 @@ class TestPy7zaBox(unittest.IsolatedAsyncioTestCase):
         await box(Config(CLI_DEFAULTS | {'root': 'data/source', 'glob': '*.csv', 'delete': False}))
         self.assertTrue(Path('data/source/x.csv').is_file(), 'original was not removed')
 
-    async def test_box_create_folders(self):
+    async def test_box_create_dirs(self):
         await box(Config(CLI_DEFAULTS | {'root': 'data/source', 'target': 'data/target', 'glob': '**/*.csv',
                                          'delete': False, '7za': '-tzip'}))
         with ZipFile('data/target/x.csv.zip') as zf:
             with zf.open('x.csv') as fz:
                 with open('data/source/x.csv', 'rb') as f:
                     self.assertEqual(f.read(), fz.read(), 'zipped content in root is identical')
-        self.assertTrue(Path('data/target/sub/y.csv.zip').is_file(), 'file in folder zipped to sub-folder')
+        self.assertTrue(Path('data/target/sub/y.csv.zip').is_file(), 'file in dir zipped to subdir')
         with ZipFile('data/target/sub/y.csv.zip') as zf:
             with zf.open('y.csv') as fz:
                 with open('data/source/sub/y.csv', 'rb') as f:
-                    self.assertEqual(f.read(), fz.read(), 'zipped content in sub-folder is identical')
+                    self.assertEqual(f.read(), fz.read(), 'zipped content in subdir is identical')
 
     async def test_box_zip_structure(self):
         await box(Config(CLI_DEFAULTS | {'root': 'data/source', 'target': 'data/target', 'glob': '**/*.csv',
-                                         'delete': False, 'create_folders': False, 'zip_structure': True,
+                                         'delete': False, 'create_dirs': False, 'zip_structure': True,
                                          '7za': '-tzip'}))
         with ZipFile('data/target/x.csv.zip') as zf:
             with zf.open('x.csv') as fz:
                 with open('data/source/x.csv', 'rb') as f:
                     self.assertEqual(f.read(), fz.read(), 'zipped content in root is identical')
-        self.assertTrue(Path('data/target/y.csv.zip').is_file(), 'file in folder zipped to root')
+        self.assertTrue(Path('data/target/y.csv.zip').is_file(), 'file in dir zipped to root')
         with ZipFile('data/target/y.csv.zip') as zf:
             with zf.open('sub/y.csv') as fz:
                 with open('data/source/sub/y.csv', 'rb') as f:
-                    self.assertEqual(f.read(), fz.read(), 'zipped content in sub-folder is identical')
+                    self.assertEqual(f.read(), fz.read(), 'zipped content in subdir is identical')
 
     async def test_box_round_trip_zip(self):
         await box(Config(CLI_DEFAULTS | {'root': 'data/source', 'glob': '*.csv', '7za': '-tzip'}))

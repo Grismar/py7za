@@ -8,6 +8,8 @@ echo "Removing 'sdist', if it exists..."
 rm -rf sdist
 echo "Removing 'build', if it exists..."
 rm -rf build
+echo "Removing 'site', if it exists..."
+rm -rf site
 echo "Removing any '.egg-info' folders, if they exist..."
 rm -rf *.egg-info/
 rm -rf **/*.egg-info/

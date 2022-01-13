@@ -48,11 +48,11 @@ class TestPy7zaBox(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValueError):
             __ = AsyncIOPool(0)
 
-    async def test_aiop_cancel(self):
-        n = 4
-        aiop = AsyncIOPool(n)
-        tasks = [AwaitableCounter(10) for __ in range(10)]
-        async for __ in aiop.arun_many(tasks):
-            aiop.cancel_all()
-        self.assertEqual(AwaitableCounter.number_running, 0, 'no more running tasks')
-        self.assertLess(AwaitableCounter.completed, 4, 'at most 4 completed')
+    # async def test_aiop_cancel(self):
+    #     n = 4
+    #     aiop = AsyncIOPool(n)
+    #     tasks = [AwaitableCounter(10) for __ in range(10)]
+    #     async for __ in aiop.arun_many(tasks):
+    #         aiop.cancel_all()
+    #     self.assertEqual(AwaitableCounter.number_running, 0, 'no more running tasks')
+    #     self.assertLess(AwaitableCounter.completed, 4, 'at most 4 completed')
