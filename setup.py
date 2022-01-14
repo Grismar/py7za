@@ -4,6 +4,12 @@ from setuptools import setup
 
 __name__ = 'py7za'
 
+project_urls = {
+    'Home page': 'https://pypi.org/project/py7za',
+    'Source Code': 'https://gitlab.com/Jaap.vanderVelde/py7za',
+    'Documentation': 'https://py7za.readthedocs.io/'
+}
+
 version_fn = os.path.join(__name__, "_version.py")
 __version__ = "unknown"
 try:

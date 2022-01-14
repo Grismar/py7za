@@ -17,18 +17,20 @@ box **/* -r C:\Temp
 
 #### create_dirs
 
-```commandline
+```none
 --create_dirs | -cd
 ```
 
-Switch for unboxing, determining whether to recreate the same directory structure in the target path. When a [target](#target) location is specified, files will not be boxed or unboxed in-place - if `create_dirs` is `False`, all the files in the target location will be created in the same directory.
+Switch for unboxing, determining whether to recreate the same directory structure in the target path. When a [target](#target) location is specified, files will not be boxed or unboxed in-place - if `create_dirs` is `False`, all the files in the target location will be created in the same directory. The default is `True`, which is the useful setting for in-place boxing and unboxing.
+
+It's recommended you review [zip_structure and create_dirs](../gotchas/#zip_structure-and-create_dirs) before use.
 
 !!! warning
-    This can lead to undesirable results (files getting overwritten, or not boxed or unboxed) if there are files with the same name in different directories. Use with care! The default is safe, setting this option to `True` requires being careful.
+    This can lead to undesirable results (files getting overwritten, or not boxed or unboxed) if there are files with the same name in different directories. Use with care! The default is safe, setting this option to `False` requires being careful.
 
 #### delete
 
-```commandline
+```none
 --delete | -d
 ```
 
@@ -36,7 +38,7 @@ Remove the files that were boxed immediately after boxing (one file at a time) a
 
 #### error_log
 
-```commandline
+```none
 --error_log | -el <path>
 ```
 
@@ -44,7 +46,7 @@ Write an error log file to the name and location specified by `<path>`. All warn
 
 #### glob
 
-```commandline
+```none
 [--glob | -g] <pattern> [<pattern> [..]]
 ```
 
@@ -55,31 +57,31 @@ At least one pattern is required for a `box` or `unbox` command. The patterns pr
 
 #### group_match
 
-```commandline
+```none
 --group_match | -gm
 ```
 
-Whether to match files that are grouped with other matched files. See also [File Groups](../configuration/file-groups). The default is to match grouped files. In short, this means that any files that are normally grouped, like for example files that make up an ArcGIS shape file, will all be matched if at least one of them is matched by a glob pattern.
+Whether to match files that are grouped with other matched files. See also [File Groups](../configuration/#file-groups). The default is to match grouped files. In short, this means that any files that are normally grouped, like for example files that make up an ArcGIS shape file, will all be matched if at least one of them is matched by a glob pattern.
 
 You can define additional groups using [group_add](../configuration/#group_add)
 
 #### group_add
 
-```commandline
+```none
 --group_add | -ga <path>
 ```
 
 In addition to default group definitions used by [group_match](../configuration/#group_match), you can define your own in a .json format that is structured the same as the `groups.json` file that accompanies the `py7za_box` script. 
 
 The structure is straightforward:
-```json
+```none
 {
   "group name": [".suffix", ".suffix", ...],
   ...
 }
 ```
 Alternatively, this structure can be part of another .json file, in which case it should be the value of a `"groups"` key:
-```json
+```none
 {
   ...
   "groups: {
@@ -99,7 +101,7 @@ In this case, `my_configuration.json` would be expected to have a `"glob"` key, 
 
 #### help
 
-```commandline
+```none
 --help | -h
 ```
 
@@ -107,25 +109,28 @@ Shows a help text for CLI parameters on the console (including the installed Tre
 
 #### log
 
-```commandline
+```none
 --log | -l <path>
 ```
 Write a log file to the name and location specified by `<path>`. For each boxing or unboxing operation, source file name, source file size, target file name, and target file size are written in .csv format. The default is not to log to file and to only report progress on the screen.
 
 #### match_dir
 
-```commandline
+```none
 --match_dir | -md
 ```
 
 Whether glob pattern(s) should match directories. By default only files are matched. If directories are matched, they will be archived as a whole, i.e. the entire directory will be archived as a single file when boxing, and unboxed all at once when unboxing.
+
+!!! note
+    7za itself supports multicore compression when compressing multiple files into a single archive. So if you're compressing many files into a few archives, which likely happens when compressing directories instead of single file, it may not be optimal to create a pool with as many tasks as you have cores. Look at [parallel](../configuration/#parallel)
 
 !!! warning
     Since there are far more possible complications here, using this option requires some planning. It is recommended not to use this switch unless the implications are clear. Some experimentation before applying it to critical files is recommended.
 
 #### match_file
 
-```commandline
+```none
 --match_file | -mf
 ```
 
@@ -139,7 +144,7 @@ This command would box each directory in the `project` directory, but none of th
 
 #### output
 
-```commandline
+```none
 --output | -o  d | default / l | list / q | quiet / s | status / v | verbose
 ```
 
@@ -158,7 +163,7 @@ When `quiet`, only essential messages like errors are written to the screen.
 
 #### overwrite
 
-```commandline
+```none
 --overwrite | -w  a | all / s | skip / u | rename_new / t | rename_existing 
 ```
 
@@ -166,7 +171,7 @@ Controls what should happen if a file is unboxed when the target already exists.
 
 #### parallel
 
-```commandline
+```none
 --parallel | -p <n>[x]
 ```
 
@@ -178,7 +183,7 @@ You can also specify a multiple of the number of available cores on the system, 
 
 Example:
 ```commandline
-box **/* -p -6
+box **/* -p " -6"
 box **/* -p 18
 box **/* -p .75x
 ```
@@ -187,9 +192,12 @@ All three of these commands, on a system with 24 cores, would cause the operatio
 !!! Note
     In rare cases you may want to kick off more parallel processes than there are cores, in particular when unboxing many large files that do not require a lot of computing power to decompress but when you do have a lot of bandwidth to saturate. However, in general a number at or below the number of available cores is optimal.
 
+!!! Note
+    If you use the [match_dir](../configuration/#match_dir) option, you may want to consider only allowing a few parallel operations, as 7za itself will make use of multiple cores to compress multiple files at once.
+
 #### root
 
-```commandline
+```none
 --root | -r <path>
 ```
 
@@ -202,7 +210,7 @@ unbox **/* -r \\server\some\path
 
 #### regex
 
-```commandline
+```none
 --regex | -re <expr>
 ```
 
@@ -219,7 +227,7 @@ Will match anything that ends in something like "2022-01 Report.docx$" and is an
 
 #### si
 
-```commandline
+```none
 --si | -si 
 ```
 
@@ -227,7 +235,7 @@ When file sizes are printed (to screen or log files) in human-readable form, whe
 
 #### target
 
-```commandline
+```none
 --target | -t <path>
 ```
 
@@ -242,7 +250,7 @@ unbox **/*.7z --root \\archive\project\directory --target \\file_server\project\
 
 #### test
 
-```commandline
+```none
 --test
 ```
 
@@ -253,7 +261,7 @@ Example:
 box **/* -r D:\test\ --test 
 ```
 This can output something like:
-```commandline
+```none
 TEST in ".": 7za.exe a "D:\test\test.mif.7z" "D:\0000\test.mif" -y -sdel
 TEST in ".": 7za.exe a "D:\test\test.mid.7z" "D:\0000\test.mid" -y -sdel
 TEST in ".": 7za.exe a "D:\test\test.txt.7z" "D:\0000\test.txt" -y -sdel
@@ -265,15 +273,15 @@ TEST: would have started boxing 3 matches.
 
 #### unbox
 
-```commandline
+```none
 --unbox | unzip | -u
 ```
 
-When you run `unbox`, you effectively run `py7za-box` with this option set to `True`, causing it to start unboxing and interpreting the other options accordingly. By default this option is `False`, so running `py7za-box` without this option is nearly identical to running `box`.
+When you run `unbox`, you effectively run `py7za-box` with this option set to `True`, causing it to start unboxing and interpreting the other options accordingly. By default, this option is `False`, so running `py7za-box` without this option is nearly identical to running `box`.
 
 #### unbox_multi
 
-```commandline
+```none
 --unbox_multi | -um
 ```
 
@@ -284,7 +292,7 @@ Whether to unzip multi-file archives. The default is `False`, unboxing will not 
 
 #### zip_archives
 
-```commandline
+```none
 --zip_archives | -za
 ```
 
@@ -292,13 +300,13 @@ Whether to zip matched archives (again). By default, when an existing archive (`
 
 #### zip_structure
 
-```commandline
+```none
 --zip_structure | -zs
  ```
 
 When this option is specified, the subdirectory structure relative to the root directory is included in the archive (there is no effect when unboxing). By default, the directory structure from root is recreated (see [create_dirs](../configuration/#create_dirs)), and there is no need to include the directory structure. But if you set `--create_dirs` to False, you may want to preserve the original location of the files, even though you are creating a flat file structure.  
 
-For example, if you start with two folders in a folder called `project`: `one` and `two`, and both contain a text file, `1.txt` and `2.txt` respectively, then running the following:
+For example, if you start with two directories in a directory called `project`: `one` and `two`, and both contain a text file, `1.txt` and `2.txt` respectively, then running the following:
 ```commandline
 box **/*.txt -zs -cd False
 ```
@@ -306,14 +314,16 @@ Will create 2 archives named `1.txt.7z` and `2.txt.7z`. However, normally these 
 ```commandline
 unbox *.7z
 ```
-Will recreate the original folder structure and put the files in their correct locations.
+Will recreate the original directory structure and put the files in their correct locations.
+
+It's recommended you review [zip_structure and create_dirs](../gotchas/#zip_structure-and-create_dirs) before use.
 
 !!! note
     Although there are use cases where this may be desirable, using the in-place method of boxing and unboxing is far more convenient in most cases, since it allows for including parts of the directory structure in search queries and since directory structure incurs next to no overhead on storage, `--zip_structure` should only be used if a flat file structure has clear advantages.
 
 #### 7za
 
-```commandline
+```none
 --7za | -7 <arguments>
 ```
 
@@ -363,7 +373,7 @@ By default, there are very few groups defined in a `groups.json` that sits in th
   "mapinfo mid/mif files": [".mid", ".mif"]
 }
 ```
-You can add your own groups to that file, but that is not recommended as this may cause issues when upgrading or uninstalling the tool. Instead, use the [add_groups](../configuration/#add_groups) option to point `py7za-box` to your own `.json` with a same structure. You can even override the existing groups, if you need, by including the same keys in the dictionary.
+You can add your own groups to that file, but that is not recommended as this may cause issues when upgrading or uninstalling the tool. Instead, use the [group_add](../group_add/#add_groups) option to point `py7za-box` to your own `.json` with a same structure. You can even override the existing groups, if you need, by including the same keys in the dictionary.
 
 Alternatively, you can add a `"groups"` key to your main `.json` configuration with settings to drive `py7za`, which would have to have a dictionary value that's the exacty same as the entire `groups.json` file.
 

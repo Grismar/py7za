@@ -1,5 +1,5 @@
 from typing import Union, Awaitable, Iterable, Generator, Any, Optional
-from asyncio import wait, FIRST_COMPLETED, Queue, QueueEmpty
+from asyncio import wait, FIRST_COMPLETED, Queue, QueueEmpty, CancelledError
 
 
 class AsyncIOPool:
@@ -14,6 +14,7 @@ class AsyncIOPool:
 
         self._tasks = Queue()
         self._aws = set()
+        self._cancelling = False
 
     @property
     def size(self):
@@ -31,6 +32,8 @@ class AsyncIOPool:
         :param aws: a single awaitable, or an iterable of awaitables to run
         :return: None
         """
+        if self._cancelling:
+            raise CancelledError('Cannot enqueue while cancelling')
         if not isinstance(aws, Iterable):
             aws = [aws]
         for aw in aws:
@@ -43,6 +46,7 @@ class AsyncIOPool:
         :param aws: a single awaitable, or an iterable of awaitables to run
         :return: a generator that yields result() from tasks as they complete
         """
+        self._cancelling = False
         if aws is not None:
             await self.enqueue(aws)
         self._aws = set()
@@ -56,12 +60,19 @@ class AsyncIOPool:
                     # run the current pool of tasks until one or more complete
                     done, self._aws = await wait(self._aws, return_when=FIRST_COMPLETED)
                     for task in done:
-                        yield task.result()
+                        try:
+                            yield task.result()
+                        except CancelledError:
+                            if self._cancelling:
+                                pass
+                            else:
+                                raise
             # no more awaitables, then done
             if not self._aws and self._tasks.empty():
                 break
 
     def cancel_all(self):
+        self._cancelling = True
         while not self._tasks.empty():
             try:
                 task = self._tasks.get_nowait()

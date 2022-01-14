@@ -8,4 +8,4 @@ Ideally, provide both Windows and Linux variants of scripts you add.
 - [rename_package.bat](scripts/rename_package.bat) and [rename_package.sh](scripts/rename_package.sh)<br/>Uses [rename_package.py](scripts/rename_package.py) to rename relevant files in the project, updating the contents of files that were included in the template. Don't use this after you've started making actual code changes.
 - [run_tests.bat](scripts/run_tests.bat) and [run_tests.sh](scripts/run_tests.sh)<br/>Runs unit tests in the [test](test) folder.
 
-Any of these scripts can be started from other folders as well e.g., from the project root: `./script/rename_package.sh my_package` - the scripts will change their working directory to be the project root.
+Any of these scripts can be started from other directories as well e.g., from the project root: `./script/rename_package.sh my_package` - the scripts will change their working directory to be the project root.
