@@ -43,6 +43,15 @@ async def box(cfg):
     else:
         regex = False
 
+    if 'not_regex' in cfg:
+        try:
+            not_regex = re.compile(cfg.not_regex)
+        except re.error:
+            error(f'Invalid (not_)regex pattern: "{cfg.not_regex}"')
+            exit(1)
+    else:
+        not_regex = False
+
     parallel = 0
     try:
         if isinstance(cfg['parallel'], str) and cfg['parallel'] and cfg['parallel'][-1].lower() == 'x':
@@ -109,7 +118,7 @@ async def box(cfg):
     si = cfg['si']
 
     def globber(root, glob_expr):
-        nonlocal skipped, regex
+        nonlocal skipped, regex, not_regex
         group_results = set()
         if not isinstance(glob_expr, list):
             glob_expr = [glob_expr]
@@ -117,6 +126,10 @@ async def box(cfg):
             for fn in Path(root).glob(ge):
                 if regex and not regex.match(str(fn)):
                     info(f'Skipping {fn} as it does not match provided regex.')
+                    skipped += 1
+                    continue
+                if not_regex and not_regex.match(str(fn)):
+                    info(f'Skipping {fn} as it matches provided not_regex.')
                     skipped += 1
                     continue
                 if (fn.is_file() and cfg['match_file']):
@@ -301,6 +314,7 @@ def print_help():
         '-p/--parallel <n>         : #Parallel processes to run [0 = available cores]\n'
         '-r/--root <path>          : Path glob pattern(s) are relative to. ["."]\n'
         '-re/--regex <expr>        : Regex path of globbed files must match. [None]\n'
+        '-nre/--not_regex <expr>   : Regex path of globbed files cannot match. [None]\n'
         '-t/--target <path>        : Root path for output. ["" / in-place]\n'
         '-u/--unbox/--unzip        : Unzip instead of zip (glob to match archives).\n'
         '-um/--unbox_multi         : Whether to unzip multi-file archives. [False]\n'
@@ -391,7 +405,7 @@ def cli_entry_point(unbox=False):
         'o': 'output', 'w': 'overwrite', 'za': 'zip_archives', 'um': 'unbox_multi', 'l': 'log', 'le': 'log_error',
         'unzip_multi': 'unbox_multi', 'error_log': 'log_error', 'el': 'log_error', 're': 'regex',
         'regular_expression': 'regex', 'mg': 'match_groups', 'ga': 'group_add', 'cf': 'create_dirs',
-        'create_folders': 'create_dirs'
+        'create_folders': 'create_dirs', 'nre': 'not_regex', 'not_regular_expression': 'not_regex'
     })
 
     if unbox:

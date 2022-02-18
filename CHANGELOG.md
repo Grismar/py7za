@@ -6,6 +6,11 @@ This package is currently in 'beta', in that it is in use by several users, but 
 
 No changes since last release.
 
+## [0.2.4] - 2022-01-18
+
+### Added
+  - negative regex check, i.e. an option to *not* match anything matching a regex
+
 ## [0.2.3] - 2022-01-14
 
 ### Changed
@@ -206,6 +211,7 @@ First release in the wild.
   - Cloned and adapted from python_package_template.
 
 [Unreleased]: /../../../
+[0.2.4]: /../../../tags/0.2.4
 [0.2.3]: /../../../tags/0.2.3
 [0.2.2]: /../../../tags/0.2.2
 [0.2.1]: /../../../tags/0.2.1

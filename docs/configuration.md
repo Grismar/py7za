@@ -114,6 +114,13 @@ Shows a help text for CLI parameters on the console (including the installed Tre
 ```
 Write a log file to the name and location specified by `<path>`. For each boxing or unboxing operation, source file name, source file size, target file name, and target file size are written in .csv format. The default is not to log to file and to only report progress on the screen.
 
+#### not_regex
+
+```none
+--not_regex | -nre <expr>
+```
+The opposite of [regex](../configuration/#regex). I.e: any objects with a full, absolute path that match the expression will be skipped. The default is that no regular expression matching is performed (`None`)
+
 #### match_dir
 
 ```none
