@@ -193,6 +193,7 @@ async def box(cfg):
         target = Path(cfg.target).absolute() if 'target' in cfg else root
         n = 0
         try:
+            stdout.write(f'\x1b[2K\rMatching glob expression(s)... ')
             for sub_path, fn in globber(cfg.root, cfg.glob):
                 if print_result and n % 100 == 0 and not test:
                     stdout.write(f'\x1b[2K\rMatching [{n}] ... ')
