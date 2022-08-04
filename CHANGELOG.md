@@ -6,10 +6,17 @@ This package is currently in 'beta', in that it is in use by several users, but 
 
 No changes since last release.
 
+## [0.2.6] - 2022-08-04
+
+### Added
+  - match file names without archive extension when unboxing with `--archive_ext`
+  - only output matched filenames for a test run with `--test_match`
+  - changes to readthedocs index to fix some broken links
+
 ## [0.2.4] - 2022-01-18
 
 ### Added
-  - negative regex check, i.e. an option to *not* match anything matching a regex
+  - check negative regex `--not_regex`, i.e. an option to *not* match anything matching a regex
 
 ## [0.2.3] - 2022-01-14
 
@@ -211,6 +218,7 @@ First release in the wild.
   - Cloned and adapted from python_package_template.
 
 [Unreleased]: /../../../
+[0.2.6]: /../../../tags/0.2.6
 [0.2.4]: /../../../tags/0.2.4
 [0.2.3]: /../../../tags/0.2.3
 [0.2.2]: /../../../tags/0.2.2

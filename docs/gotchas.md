@@ -134,3 +134,35 @@ If you notice these warnings and errors, simply close the program locking the fi
 
 !!! warning
     If you were using [zip_archives](../configuration/#zip_archives) the above advice does not work! In that case, if you run into locked files, you'll either need to specifically box the missed files after getting rid of the lock, or unbox everything before retrying the `box` operation. Otherwise, all the previously created archives would get archived themselves. 
+
+
+### Interrupting vs. Killing runs
+
+If you need to interrupt a long run of boxing or unboxing, you can hit `Ctrl+C` or `Ctrl+Break` and `py7za-box` will continue to finish up running tasks before terminating.
+
+However, if your run gets terminated in some other way (by killing the task, closing the console window it was running in, shutting down the computer it was running on, power failure, etc.) you may end up in a situation where an incomplete archive or file was created. In that situation there will be two files, one with the boxed version of the file name and one with the original file name.
+
+As it is impossible for `py7za-box` to know what exactly is being recovered from, there are no CLI options to deal with this, and you may `py7za-box` throwing errors as it encounters corrupt archive files. Even worse would be assuming a file was correctly unboxed, when it was only partially unboxed.
+
+You will have to proceed with care, but a suggestion for Windows user is to use the following command in PowerShell to list files that were probably affected:
+```powershell
+Get-ChildItem *.7z -recurse | ForEach-Object {if(Test-Path (Join-Path $_.directoryname $_.basename) -Type leaf) {$_} }
+```
+This command runs in the current working directory and finds all files that have the `.7z` extension (change as needed) in there and in all subdirectories. It only prints those file names for which there is a matching file without that extension.
+
+If you were feeling particularly adventurous (or perhaps after first running and verifying the above), you could run this command to get rid of the surplus .7z files after a killed **boxing** run: 
+```powershell
+Get-ChildItem *.7z -recurse | ForEach-Object {if(Test-Path (Join-Path $_.directoryname $_.basename) -Type leaf) {Remove-Item $_} }
+```
+
+If you need to recover from a killed **unboxing** run, you could make use of the [overwrite](../configuration/#overwrite) CLI option, but keep in mind that this will apply to *all* operations. The default behaviour for [overwrite](../configuration/#overwrite) is to *skip* with a warning.
+
+If you instead opt to remove files that still have a matching boxed version sitting next to them, you could used the following command:
+```powershell
+Get-ChildItem *.7z -recurse | ForEach-Object {if(Test-Path (Join-Path $_.directoryname $_.basename) -Type leaf) {Remove-Item (Join-Path $_.directoryname $_.basename)} }
+```
+
+!!! warning 
+    None of these options should be taken lightly. `py7za-box` was written with default  settings that aim to avoid accidentally overwriting or deleting files and allowing you to recover from mistakes. However, the suggestions given here *will* cause files to be deleted and you and only you are responsible for choosing to use them. 
+!!! tip
+    In general: **don't kill runs, interrupt runs** using `Ctrl+C`.

@@ -97,7 +97,8 @@ async def box(cfg):
     list_status = cfg.output == 'd'
 
     log = cfg['log'] if 'log' in cfg else None
-    test = cfg['test'] if 'test' in cfg else False
+    test_match = cfg['test_match'] if 'test_match' in cfg else False
+    test = cfg['test'] or test_match if 'test' in cfg else test_match
     skipped_test = 0
 
     if cfg['match_groups']:
@@ -115,20 +116,26 @@ async def box(cfg):
     zip_structure = cfg['zip_structure']
     zip_archives = cfg['zip_archives']
     match_groups = cfg['match_groups']
+    archive_ext = cfg['archive_ext']
     si = cfg['si']
 
     def globber(root, glob_expr):
-        nonlocal skipped, regex, not_regex
+        nonlocal skipped, regex, not_regex, archive_ext
         group_results = set()
         if not isinstance(glob_expr, list):
             glob_expr = [glob_expr]
+        ae = '.' + archive_ext.strip('.') if archive_ext else ''
+        lae = len(ae)
         for ge in glob_expr:
+            if ae:
+                ge += ae
             for fn in Path(root).glob(ge):
-                if regex and not regex.match(str(fn)):
+                mfn = str(fn) if ae else str(fn)[:lae]
+                if regex and not regex.match(mfn):
                     info(f'Skipping {fn} as it does not match provided regex.')
                     skipped += 1
                     continue
-                if not_regex and not_regex.match(str(fn)):
+                if not_regex and not_regex.match(mfn):
                     info(f'Skipping {fn} as it matches provided not_regex.')
                     skipped += 1
                     continue
@@ -184,7 +191,7 @@ async def box(cfg):
             await sleep(0.5)
 
     async def run_all():
-        nonlocal total, done, total_content_size, total_zip_size, skipped, finished, test, skipped_test
+        nonlocal total, done, total_content_size, total_zip_size, skipped, finished, test, test_match, skipped_test
         global aiop
 
         zippers = []
@@ -214,7 +221,10 @@ async def box(cfg):
                                   on_start=start, working_dir=wd))
                     else:
                         skipped_test += 1
-                        print(f'TEST in "{wd}": 7za.exe a "{target_path}{cfg.suffix}" "{content}" {cli_options}')
+                        if test_match:
+                            print(f'\x1b[2K\r{content}')
+                        else:
+                            print(f'\x1b[2K\rTEST in "{wd}": 7za.exe a "{target_path}{cfg.suffix}" "{content}" {cli_options}')
                 else:
                     archive = root / sub_path / fn
                     if not unbox_multi and (
@@ -228,7 +238,10 @@ async def box(cfg):
                         zippers.append(Py7za(f'x "{archive}" "-o{target_path}" {cli_options}', start))
                     else:
                         skipped_test += 1
-                        print(f'TEST: 7za.exe x "{archive}" "-o{target_path}" {cli_options}')
+                        if test_match:
+                            print(f'\x1b[2K\r{archive}')
+                        else:
+                            print(f'\x1b[2K\rTEST: 7za.exe x "{archive}" "-o{target_path}" {cli_options}')
             if print_result:
                 stdout.write(f'\x1b[2K\rMatched {n} object(s), '
                              f'start processing in up to {aiop.size} parallel processes ...\n')
@@ -304,12 +317,13 @@ def print_help():
         '                            Add quotes if your pattern contains spaces.\n'
         'Options:\n'
         '-h/--help                 : This text.\n'
-        '-d/--delete               : Remove the source after (un)boxing. [True]\n'
+        '-ae/--archive_ext <ext>   : Match original, minus archive extension. [None]\n'
         '-cd/--create_dirs         : Recreate dir structure in target path. [True]\n'
-        '-l/--log <path>           : Log source, size, target, size as .csv. [None]\n'
+        '-d/--delete               : Remove the source after (un)boxing. [True]\n'
         '-el/--error_log <path>    : Log warnings and error messages to file. [None]\n'
         '-gm/--group_match [bool]  : Group files with grouped suffixes. [True]\n'
         '-ga/--group_add <path>    : Path to extra .json group definitions. [None]\n'
+        '-l/--log <path>           : Log source, size, target, size as .csv. [None]\n'
         '-md/--match_dir [bool]    : Glob pattern(s) should match dirs. [False]\n'
         '-mf/--match_file [bool]   : Glob pattern(s) should match files. [True]\n'
         '-p/--parallel <n>         : #Parallel processes to run [0 = available cores]\n'
@@ -326,6 +340,7 @@ def print_help():
         '                            Note: d/l/v do not work for all archive types.\n'
         '-si                       : Whether to use SI units for file sizes. [False]\n'
         '--test                    : Test mode - no files are changed. [False]\n'
+        '--test_match              : Like test mode - but only matched names. [False]\n'
         '-w/--overwrite [a/s/u/t]  : Used overwrite mode when unboxing. [s]\n'
         '                            a:all, s:skip, u:rename new, t:rename existing.\n'
         '-za/--zip_archives [bool] : Whether to zip matched archives (again). [False]\n'
@@ -358,6 +373,7 @@ CLI_DEFAULTS = {
     'si': False,
     'root': '.',
     'test': False,
+    'test_match': False,
     'unbox': False,
     'unbox_multi': False,
     'verbose': False,
@@ -406,7 +422,8 @@ def cli_entry_point(unbox=False):
         'o': 'output', 'w': 'overwrite', 'za': 'zip_archives', 'um': 'unbox_multi', 'l': 'log', 'le': 'log_error',
         'unzip_multi': 'unbox_multi', 'error_log': 'log_error', 'el': 'log_error', 're': 'regex',
         'regular_expression': 'regex', 'mg': 'match_groups', 'ga': 'group_add', 'cf': 'create_dirs',
-        'create_folders': 'create_dirs', 'nre': 'not_regex', 'not_regular_expression': 'not_regex'
+        'create_folders': 'create_dirs', 'nre': 'not_regex', 'not_regular_expression': 'not_regex',
+        'ae': 'archive_ext'
     })
 
     if unbox:
@@ -454,6 +471,16 @@ def cli_entry_point(unbox=False):
     if cfg.zip_structure and cfg.create_dirs:
         warning(f'Keeping subdirectories from root in archives, as well creating the directory structure in the '
                 f'target location may produce unexpected results.')
+
+    if 'archive_ext' in cfg and cfg.archive_ext:
+        if isinstance(cfg.archive_ext, bool):
+            cfg.archive_ext = '7z'  # default if none specified
+        if not cfg.unbox:
+            warning(f'The --archive_ext option was specified, but does nothing unless unboxing and will be ignored.')
+        elif cfg.archive_ext.lower() not in ['7z', 'zip', 'lzma', 'gzip', 'gz', 'tar.gz']:
+            warning(f'The provided --archive_ext "{cfg.archive_ext}" does not match common archive extensions.')
+    else:
+        cfg['archive_ext'] = False
 
     output_modes = {
         'd': 'd', 'default': 'd',
