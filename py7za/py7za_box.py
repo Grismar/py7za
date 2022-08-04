@@ -116,21 +116,21 @@ async def box(cfg):
     zip_structure = cfg['zip_structure']
     zip_archives = cfg['zip_archives']
     match_groups = cfg['match_groups']
-    archive_ext = cfg['archive_ext']
+    archive_ext = cfg['archive_ext'] if 'archive_ext' in cfg else False
     si = cfg['si']
 
     def globber(root, glob_expr):
-        nonlocal skipped, regex, not_regex, archive_ext
+        nonlocal skipped, regex, not_regex, archive_ext, unbox
         group_results = set()
         if not isinstance(glob_expr, list):
             glob_expr = [glob_expr]
-        ae = '.' + archive_ext.strip('.') if archive_ext else ''
+        ae = '.' + archive_ext.strip('.') if archive_ext and isinstance(archive_ext, str) else ''
         lae = len(ae)
         for ge in glob_expr:
-            if ae:
+            if unbox and ae:
                 ge += ae
             for fn in Path(root).glob(ge):
-                mfn = str(fn) if ae else str(fn)[:lae]
+                mfn = str(fn) if not unbox or not ae else str(fn)[:-lae]
                 if regex and not regex.match(mfn):
                     info(f'Skipping {fn} as it does not match provided regex.')
                     skipped += 1

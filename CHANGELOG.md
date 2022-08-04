@@ -6,6 +6,11 @@ This package is currently in 'beta', in that it is in use by several users, but 
 
 No changes since last release.
 
+## [0.2.7] - 2022-08-04
+
+### Fixed
+  - correctly match names with `--regex` when using `--archive_ext`
+
 ## [0.2.6] - 2022-08-04
 
 ### Added
