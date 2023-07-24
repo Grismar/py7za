@@ -6,6 +6,11 @@ This package is currently in 'beta', in that it is in use by several users, but 
 
 No changes since last release.
 
+## [0.2.9] - 2023-07-24
+
+### Changed
+  - require Python 3.10 or previous<br>due to  "Changed in version 3.11: Passing coroutine objects to wait() directly is forbidden." (https://docs.python.org/3/library/asyncio-task.html#asyncio.wait )
+
 ## [0.2.8] - 2022-08-04
 
 ### Fixed
@@ -228,6 +233,9 @@ First release in the wild.
   - Cloned and adapted from python_package_template.
 
 [Unreleased]: /../../../
+[0.2.9]: /../../../tags/0.2.9
+[0.2.8]: /../../../tags/0.2.8
+[0.2.7]: /../../../tags/0.2.7
 [0.2.6]: /../../../tags/0.2.6
 [0.2.4]: /../../../tags/0.2.4
 [0.2.3]: /../../../tags/0.2.3

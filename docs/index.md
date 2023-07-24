@@ -2,6 +2,7 @@
 
 !!! Info
     - created using Python 3.9.10, and PyCharm (backwards compatible to Python 3.8) 
+    - as of version 0.2.6 not compatible with Python 3.11 and beyond, pending updates of asynchronous handling
     - dependency on [conffu](https://pypi.org/project/conffu/) for CLI and .json configuration, only when installing with `[box]` option
 
 Navigate using the tree on the left, or jump to:
