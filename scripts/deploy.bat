@@ -2,7 +2,7 @@
 git add .
 git commit -m %1
 git push
-call script/cleanup.bat
-call script/build.bat
+call scripts/cleanup.bat
+call scripts/build.bat
 twine upload dist/*
-call script/cleanup.bat
+call scripts/cleanup.bat

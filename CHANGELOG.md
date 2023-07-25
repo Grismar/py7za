@@ -6,6 +6,11 @@ This package is currently in 'beta', in that it is in use by several users, but 
 
 No changes since last release.
 
+## [0.2.10] - 2023-07-26
+
+### Changed
+  - pass -mmt2 to each 7za process to force max 2 threads per process, unless another value was passed explicitly<br>this avoids py7za taking up all processing power when a specific number of parallel processes was passed
+
 ## [0.2.9] - 2023-07-24
 
 ### Changed
@@ -233,6 +238,7 @@ First release in the wild.
   - Cloned and adapted from python_package_template.
 
 [Unreleased]: /../../../
+[0.2.10]: /../../../tags/0.2.10
 [0.2.9]: /../../../tags/0.2.9
 [0.2.8]: /../../../tags/0.2.8
 [0.2.7]: /../../../tags/0.2.7
