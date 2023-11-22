@@ -1,5 +1,5 @@
-from typing import Union, Awaitable, Iterable, Generator, Any, Optional
-from asyncio import wait, FIRST_COMPLETED, Queue, QueueEmpty, CancelledError
+from typing import Union, Awaitable, Iterable, AsyncGenerator, Any, Optional
+from asyncio import wait, FIRST_COMPLETED, Queue, QueueEmpty, CancelledError, Task, create_task
 
 
 class AsyncIOPool:
@@ -37,10 +37,14 @@ class AsyncIOPool:
         if not isinstance(aws, Iterable):
             aws = [aws]
         for aw in aws:
-            await self._tasks.put(aw)
+            await self._tasks.put(aw if isinstance(aw, Task) else create_task(self._task_wrapper(aw)))
+
+    @staticmethod
+    async def _task_wrapper(awaitable):
+        return await awaitable
 
     async def arun_many(self, aws: Optional[Union[Awaitable, Iterable[Awaitable]]] = None) \
-            -> Generator[Any, None, None]:
+            -> AsyncGenerator[Any, None]:
         """
         Run as many tasks as size allows in parallel, starting new ones when previous ones complete
         :param aws: a single awaitable, or an iterable of awaitables to run
@@ -78,6 +82,6 @@ class AsyncIOPool:
                 task = self._tasks.get_nowait()
             except QueueEmpty:
                 break
-            task.close()
+            task.cancel()
         for a in self._aws:
             a.cancel()

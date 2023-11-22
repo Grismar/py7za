@@ -2,7 +2,7 @@ from shlex import split
 from typing import Union, List, Callable
 from pathlib import Path
 from asyncio import create_subprocess_exec, run
-from asyncio.subprocess import PIPE
+import asyncio.subprocess
 from shutil import which
 from os import name as os_name
 from datetime import datetime
@@ -10,7 +10,7 @@ from datetime import datetime
 
 def arg_split(args, platform=os_name):
     """
-    Like calling shlex.split, but sets `posix=` according to platform
+    Like calling `shlex.split`, but sets `posix=` according to platform
     and unquotes previously quoted arguments on Windows
     :param args: a command line string consisting of a command with arguments, e.g. 'dir "C:/Program Files"'
     :param platform: a value like os.name would return, e.g. 'nt'
@@ -41,7 +41,7 @@ class Py7za:
 
     def __init__(self, arguments: Union[str, List[str]], on_start: Callable = None, working_dir: str = '.'):
         """
-        Creates an (awaitable) object ready to run 7za with given arguments
+        Creates an (awaitable) object ready to run 7za with given arguments.
         :param arguments: arguments to pass to 7za, after processing (always pass progress and output>1, disable log)
         :param on_start: callback to be called just before starting a 7za subprocess is started
         :param working_dir: working directory for 7za
@@ -94,7 +94,8 @@ class Py7za:
             self.on_start(self)
 
         proc = await create_subprocess_exec(
-            self.executable_7za, *self.arguments, stdout=PIPE, stderr=PIPE, cwd=self.working_dir)
+            self.executable_7za, *self.arguments,
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, cwd=self.working_dir)
 
         line = b''
         while True:
@@ -114,10 +115,10 @@ class Py7za:
                 self.return_code = proc.returncode
                 return self
 
-    def run(self) -> int:
+    def run(self) -> 'Py7za':
         """
         Run and await arun()
-        :return: return code of process
+        :return: self (with updated attributes, like .return_code and .errors)
         """
         return run(self.arun())
 
@@ -131,7 +132,7 @@ class Py7za:
                  list of files is empty or a list of tuples of datetime, attributes, size, compressed size, and name
         """
         proc = await create_subprocess_exec(
-            cls.executable_7za, 'l', archive, stdout=PIPE)
+            cls.executable_7za, 'l', archive, stdout=asyncio.subprocess.PIPE)
         line = '\n'
         listing = False
         files = []

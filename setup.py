@@ -52,7 +52,7 @@ setup(
         'box': ['conffu'],
         'dev': ['mkdocs']
     },
-    python_requires='>=3.8,<=3.10',
+    python_requires='>=3.8',
     entry_points={
         'console_scripts': [
             'py7za-box=py7za.py7za_box:cli_entry_point',

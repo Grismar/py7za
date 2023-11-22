@@ -8,7 +8,7 @@ from conffu import Config
 from pathlib import Path
 from asyncio import get_event_loop, sleep, gather
 from py7za import Py7za, AsyncIOPool, available_cpu_count, nice_size
-from subprocess import list2cmdline
+import subprocess
 import re
 from json import load
 from json.decoder import JSONDecodeError
@@ -52,7 +52,6 @@ async def box(cfg):
     else:
         not_regex = False
 
-    parallel = 0
     try:
         if isinstance(cfg['parallel'], str) and cfg['parallel'] and cfg['parallel'][-1].lower() == 'x':
             parallel = int(float(cfg['parallel'][:-1]) * available_cpu_count())
@@ -132,7 +131,7 @@ async def box(cfg):
                     info(f'Skipping {fn} as it matches provided not_regex.')
                     skipped += 1
                     continue
-                if (fn.is_file() and cfg['match_file']):
+                if fn.is_file() and cfg['match_file']:
                     if not unbox and not zip_archives and fn.suffix in ARCHIVE_SUFFIXES:
                         info(f'Skipping {fn} as it is an archive and --zip_archives was not specified.')
                         skipped += 1
@@ -159,13 +158,13 @@ async def box(cfg):
                                     group_results.add((parent, name))
                                     yield parent, name
                         yield fn.relative_to(root).parent, fn.name
-                elif (fn.is_dir() and cfg['match_dir']):
+                elif fn.is_dir() and cfg['match_dir']:
                     yield fn.relative_to(root).parent, fn.name
 
     def start(py7za):
         nonlocal running, current, info_command
         if info_command:
-            info(f'"{py7za.working_dir}": '+list2cmdline([py7za.executable_7za, *py7za.arguments]))
+            info(f'"{py7za.working_dir}": ' + subprocess.list2cmdline([py7za.executable_7za, *py7za.arguments]))
         current += 1
         running.append(py7za)
 
@@ -237,7 +236,7 @@ async def box(cfg):
                 finished += 1
                 if py7za.return_code > 0:
                     error(f'Return code {py7za.return_code}'
-                          f' from: {list2cmdline([py7za.executable_7za, *py7za.arguments])}'
+                          f' from: {subprocess.list2cmdline([py7za.executable_7za, *py7za.arguments])}'
                           f'\n{py7za.errors.decode()}')
                     continue
                 fn = py7za.arguments[1]
