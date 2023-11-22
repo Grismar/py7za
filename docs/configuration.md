@@ -15,6 +15,24 @@ Would be the same as:
 box **/* -r C:\Temp
 ```
 
+
+#### archive_ext 
+
+```none
+--archive_ext | -ae [<ext>]
+```
+If provided, globs will be interpreted as if matching the original file names, and matched files will be matched against any regular expressions provided without the archive extension.
+
+Example:
+```commandline
+unbox **/*.csv -ae 7z -re "test.*\.csv"
+```
+This would proceed to find files ending in `.csv.7z` (i.e. previously boxed `.csv` files) and only archives with names like `test123.csv.7z` (i.e. starting with `test` and ending in `.csv`, ignoring the `.7z`) would be matched.
+
+!!! Note 
+    this is particularly useful if you have a complex set of globs and expressions to select files for boxing, perhaps defined in a configuration file. With the `--archive_ext` option, you can reuse that same configuration file without having to add archive extensions in many places.  
+
+
 #### create_dirs
 
 ```none
@@ -200,7 +218,10 @@ All three of these commands, on a system with 24 cores, would cause the operatio
     In rare cases you may want to kick off more parallel processes than there are cores, in particular when unboxing many large files that do not require a lot of computing power to decompress but when you do have a lot of bandwidth to saturate. However, in general a number at or below the number of available cores is optimal.
 
 !!! Note
-    If you use the [match_dir](../configuration/#match_dir) option, you may want to consider only allowing a few parallel operations, as 7za itself will make use of multiple cores to compress multiple files at once.
+    Unless you have `psutil` installed in your environment, `py7za-box` currently won't be able to tell how many physical cores are available. You should be fine leaving several vCPU free, but if you want to be able to work comfortably, you may want to use an option like `-p .375x` to ensure your have at least a single physical core free on any 4 physical core (or more) system.
+
+!!! Note
+    If you use the [match_dir](../configuration/#match_dir) option, you may want to consider only allowing very few parallel operations, as 7za itself will make use of multiple cores to compress multiple files at once.
 
 #### root
 
@@ -277,6 +298,28 @@ Completed processing 0 B of files into 0 archives, totaling 0 B.
 Took 0:00:00.010001. Skipped 0 files matching glob.
 TEST: would have started boxing 3 matches.
 ```
+
+#### test_match
+
+```none
+--test_match
+```
+Like [test](../configuration/#test), but instead of showing the full `7za.exe` commands, it only shows the files that were matched and the order in which the `7za.exe` commands for them would be started.
+Example:
+```commandline
+box **/* -r D:\test\ --test_match 
+```
+This can output something like:
+```none
+D:\0000\test.mif
+D:\0000\test.mid
+D:\0000\test.txt
+Matched 3 object(s), start processing in up to 16 parallel processes ...
+Completed processing 0 B of files into 0 archives, totaling 0 B.
+Took 0:00:00.010001. Skipped 0 files matching glob.
+TEST: would have started boxing 3 matches.
+```
+Note: if both [test](../configuration/#test) and [test_match](../configuration/#test_match) are provided, [test_match](../configuration/#test) takes precedence.
 
 #### unbox
 

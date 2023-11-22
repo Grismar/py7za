@@ -109,7 +109,7 @@ Using Py7za from Python is mainly useful if you want to access 7za instead of th
 from py7za import Py7za
 
 # zip all .txt files in c:\temp and subdirectories to texts.zip
-Py7za.run(r'a c:\temp\*.txt texts.zip -r')
+Py7za(r'a c:\temp\*.txt texts.zip -r').run()
 ```
 
 A simple example use of `AsyncIOPool`, to run multiple copies of 7za in parallel:

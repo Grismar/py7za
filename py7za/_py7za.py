@@ -93,6 +93,9 @@ class Py7za:
         if self.on_start is not None:
             self.on_start(self)
 
+        # unless -mnt is passed, set -mnt2 to force no more than 2 threads per process
+        if not any(a.startswith('-mmt') for a in self.arguments):
+            self.arguments.append('-mmt2')
         proc = await create_subprocess_exec(
             self.executable_7za, *self.arguments,
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, cwd=self.working_dir)

@@ -4,7 +4,7 @@ This package is currently in 'beta', in that it is in use by several users, but 
 
 ## [Unreleased]
 
-## [0.2.7] - 2023-11-22
+## [0.2.11] - 2023-11-22
 
 ### Changed
   - have `Py7za.run()` return Py7za class with return code and errors, instead of just a return code. 
@@ -14,15 +14,42 @@ This package is currently in 'beta', in that it is in use by several users, but 
   - fix several comment typos.
   - fix `subprocess` imports to fully qualified references.
   
-## [0.2.6] - 2023-07-24
+## [0.2.10] - 2023-07-24
 
 ### Changed
  - as of version 0.2.5 not compatible with Python 3.11 and beyond, pending updates of asynchronous handling
 
+## [0.2.10] - 2023-07-26
+
+### Changed
+  - pass -mmt2 to each 7za process to force max 2 threads per process, unless another value was passed explicitly<br>this avoids py7za taking up all processing power when a specific number of parallel processes was passed
+
+## [0.2.9] - 2023-07-24
+
+### Changed
+  - require Python 3.10 or previous<br>due to  "Changed in version 3.11: Passing coroutine objects to wait() directly is forbidden." (https://docs.python.org/3/library/asyncio-task.html#asyncio.wait )
+
+## [0.2.8] - 2022-08-04
+
+### Fixed
+  - build `mkdocs` documentation without errors 
+
+## [0.2.7] - 2022-08-04
+
+### Fixed
+  - correctly match names with `--regex` when using `--archive_ext`
+
+## [0.2.6] - 2022-08-04
+
+### Added
+  - match file names without archive extension when unboxing with `--archive_ext`
+  - only output matched filenames for a test run with `--test_match`
+  - changes to readthedocs index to fix some broken links
+
 ## [0.2.4] - 2022-01-18
 
 ### Added
-  - negative regex check, i.e. an option to *not* match anything matching a regex
+  - check negative regex `--not_regex`, i.e. an option to *not* match anything matching a regex
 
 ## [0.2.3] - 2022-01-14
 
@@ -224,7 +251,11 @@ First release in the wild.
   - Cloned and adapted from python_package_template.
 
 [Unreleased]: /../../../
-[0.2.7]: /../../../tags/0.2.6
+[0.2.11]: /../../../tags/0.2.11
+[0.2.10]: /../../../tags/0.2.10
+[0.2.9]: /../../../tags/0.2.9
+[0.2.8]: /../../../tags/0.2.8
+[0.2.7]: /../../../tags/0.2.7
 [0.2.6]: /../../../tags/0.2.6
 [0.2.4]: /../../../tags/0.2.4
 [0.2.3]: /../../../tags/0.2.3
