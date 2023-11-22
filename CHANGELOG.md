@@ -4,6 +4,11 @@ This package is currently in 'beta', in that it is in use by several users, but 
 
 ## [Unreleased]
 
+## [0.2.12] - 2023-11-22
+
+### Fixed
+  - update `readthedocs.io` configuration.
+
 ## [0.2.11] - 2023-11-22
 
 ### Changed
@@ -251,6 +256,7 @@ First release in the wild.
   - Cloned and adapted from python_package_template.
 
 [Unreleased]: /../../../
+[0.2.12]: /../../../tags/0.2.12
 [0.2.11]: /../../../tags/0.2.11
 [0.2.10]: /../../../tags/0.2.10
 [0.2.9]: /../../../tags/0.2.9
