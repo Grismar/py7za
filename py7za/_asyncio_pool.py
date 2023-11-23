@@ -12,8 +12,8 @@ class AsyncIOPool:
         # assign through setter
         self.size = pool_size
 
-        self._tasks = Queue()
-        self._aws = set()
+        self._awaitables = Queue()
+        self._running = set()
         self._cancelling = False
 
     @property
@@ -37,7 +37,7 @@ class AsyncIOPool:
         if not isinstance(aws, Iterable):
             aws = [aws]
         for aw in aws:
-            await self._tasks.put(aw if isinstance(aw, Task) else create_task(self._task_wrapper(aw)))
+            await self._awaitables.put(aw)
 
     @staticmethod
     async def _task_wrapper(awaitable):
@@ -53,16 +53,17 @@ class AsyncIOPool:
         self._cancelling = False
         if aws is not None:
             await self.enqueue(aws)
-        self._aws = set()
+        self._running = set()
         while True:
             # room for more tasks and tasks queued
-            while len(self._aws) < self._size and not self._tasks.empty():
+            while len(self._running) < self._size and not self._awaitables.empty():
                 # add the next task
-                self._aws.add(await self._tasks.get())
+                t = await self._awaitables.get()
+                self._running.add(t if isinstance(t, Task) else create_task(self._task_wrapper(t)))
             else:
-                if self._aws:
+                if self._running:
                     # run the current pool of tasks until one or more complete
-                    done, self._aws = await wait(self._aws, return_when=FIRST_COMPLETED)
+                    done, self._running = await wait(self._running, return_when=FIRST_COMPLETED)
                     for task in done:
                         try:
                             yield task.result()
@@ -72,16 +73,17 @@ class AsyncIOPool:
                             else:
                                 raise
             # no more awaitables, then done
-            if not self._aws and self._tasks.empty():
+            if not self._running and self._awaitables.empty():
                 break
 
     def cancel_all(self):
         self._cancelling = True
-        while not self._tasks.empty():
+        while not self._awaitables.empty():
             try:
-                task = self._tasks.get_nowait()
+                aw = self._awaitables.get_nowait()
             except QueueEmpty:
                 break
-            task.cancel()
-        for a in self._aws:
-            a.cancel()
+            if isinstance(aw, Task):
+                aw.cancel()
+        for t in self._running:
+            t.cancel()

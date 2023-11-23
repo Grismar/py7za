@@ -35,14 +35,19 @@ class AwaitableCounter:
 
 class TestPy7zaBox(unittest.IsolatedAsyncioTestCase):
     async def test_aiop(self):
-        n = 4
+        c, n, total = 0, 5, 100
         aiop = AsyncIOPool(n)
-        tasks = [AwaitableCounter(10) for __ in range(10)]
+        tasks = [AwaitableCounter(10) for __ in range(total)]
         done = []
+        s = 0
         async for t in aiop.arun_many(tasks):
             done.append(t)
             self.assertLess(AwaitableCounter.number_running, n, f'never more than pool size running')
-        self.assertEqual(len(done), 10, 'all tasks completed')
+            s += AwaitableCounter.number_running
+            c += 1
+        self.assertGreater(c, 2, 'test sufficient to at least run 3 cycles')
+        self.assertEqual(len(done), total, 'all tasks completed')
+        print(s/c)
 
     async def test_aiop_size(self):
         with self.assertRaises(ValueError):

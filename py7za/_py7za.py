@@ -110,6 +110,8 @@ class Py7za:
                 line += b
             # stdout read will return b'' when the process has ended
             if b == b'':
+                if line:
+                    self._parse_stdout(line)  # remaining output on standard out
                 self.errors = await proc.stderr.read()
                 await proc.wait()
                 self.done = True
