@@ -123,7 +123,8 @@ class TestPy7zaBox(unittest.IsolatedAsyncioTestCase):
         with ZipFile('data/source/x.csv.zip') as zf:
             self.assertEqual(1, len(zf.filelist), 'Only one file in resulting archive')
 
-    async def _do_test_overwrite(self, mode=None, suffix='zip'):
+    @staticmethod
+    async def _do_test_overwrite(mode=None, suffix='zip'):
         with open('data/source/x.csv') as f:
             content = f.read()
         await box(Config(CLI_DEFAULTS | {'root': 'data/source', 'glob': 'x.csv', 'delete': False,
@@ -152,45 +153,30 @@ class TestPy7zaBox(unittest.IsolatedAsyncioTestCase):
         with open('data/source/x.csv') as f:
             self.assertEqual(content, f.read(), 'Content of original file back to original, overwritten')
 
-    async def test_box_overwrite_source_rename_new_zip(self):
-        content, new_content = await self._do_test_overwrite('u', suffix='zip')
+    async def _finish_rename_test(self, content1, content2):
         self.assertFalse(Path('data/source/x.csv.zip').is_file(), 'archive is gone after unbox')
         self.assertTrue(Path('data/source/x.csv').is_file(), '"original" file exist')
         with open('data/source/x.csv') as f:
-            self.assertEqual(new_content, f.read(), 'Content of original file untouched, no overwrite')
+            self.assertEqual(content2, f.read(), 'Content of original file untouched, no overwrite')
         self.assertTrue(Path('data/source/x_1.csv').is_file(), 'extracted file was renamed')
         with open('data/source/x_1.csv') as f:
-            self.assertEqual(content, f.read(), 'Extracted file contains original content')
+            self.assertEqual(content1, f.read(), 'Extracted file contains original content')
+
+    async def test_box_overwrite_source_rename_new_zip(self):
+        content, new_content = await self._do_test_overwrite('u', suffix='zip')
+        return self._finish_rename_test(content, new_content)
 
     async def test_box_overwrite_source_rename_new_7z(self):
         content, new_content = await self._do_test_overwrite('u', suffix='7z')
-        self.assertFalse(Path('data/source/x.csv.zip').is_file(), 'archive is gone after unbox')
-        self.assertTrue(Path('data/source/x.csv').is_file(), '"original" file exist')
-        with open('data/source/x.csv') as f:
-            self.assertEqual(new_content, f.read(), 'Content of original file untouched, no overwrite')
-        self.assertTrue(Path('data/source/x_1.csv').is_file(), 'extracted file was renamed')
-        with open('data/source/x_1.csv') as f:
-            self.assertEqual(content, f.read(), 'Extracted file contains original content')
+        return self._finish_rename_test(content, new_content)
 
     async def test_box_overwrite_source_rename_existing_zip(self):
         content, new_content = await self._do_test_overwrite('t', suffix='zip')
-        self.assertFalse(Path('data/source/x.csv.zip').is_file(), 'archive is gone after unbox')
-        self.assertTrue(Path('data/source/x.csv').is_file(), '"original" file exist')
-        with open('data/source/x.csv') as f:
-            self.assertEqual(content, f.read(), 'extracted file to original name, original content')
-        self.assertTrue(Path('data/source/x_1.csv').is_file(), 'existing file was renamed')
-        with open('data/source/x_1.csv') as f:
-            self.assertEqual(new_content, f.read(), 'Existing files still contains new content')
+        return self._finish_rename_test(new_content, content)
 
     async def test_box_overwrite_source_rename_existing_7z(self):
         content, new_content = await self._do_test_overwrite('t', suffix='7z')
-        self.assertFalse(Path('data/source/x.csv.zip').is_file(), 'archive is gone after unbox')
-        self.assertTrue(Path('data/source/x.csv').is_file(), '"original" file exist')
-        with open('data/source/x.csv') as f:
-            self.assertEqual(content, f.read(), 'extracted file to original name, original content')
-        self.assertTrue(Path('data/source/x_1.csv').is_file(), 'existing file was renamed')
-        with open('data/source/x_1.csv') as f:
-            self.assertEqual(new_content, f.read(), 'Existing files still contains new content')
+        return self._finish_rename_test(new_content, content)
 
     async def test_box_dir_default(self):
         await box(Config(CLI_DEFAULTS | {'glob': '**/*.csv', '7za': '-tzip'}))
@@ -224,7 +210,7 @@ class TestPy7zaBox(unittest.IsolatedAsyncioTestCase):
     async def test_box_dirs_no_match(self):
         await box(Config(CLI_DEFAULTS | {'glob': 'sub?', 'root': 'data/source', '7za': '-tzip'}))
         self.assertFalse(Path('data/source/sub2.zip').is_file(),
-                        'no zipped subdirectory without --match_dir')
+                         'no zipped subdirectory without --match_dir')
 
     async def test_box_dirs_match(self):
         await box(Config(CLI_DEFAULTS | {'glob': 'sub?', 'root': 'data/source', 'match_dir': True, '7za': '-tzip'}))
@@ -237,13 +223,13 @@ class TestPy7zaBox(unittest.IsolatedAsyncioTestCase):
         await box(Config(CLI_DEFAULTS | {'glob': 'sub?.zip', 'root': 'data/source', 'unbox': True,
                                          'unbox_multi': True}))
         self.assertTrue(Path('data/source/sub2').is_dir(),
-                       'zipped subdirectory restored')
+                        'zipped subdirectory restored')
         self.assertTrue(Path('data/source/sub2/y2.csv').is_file(),
-                       'zipped subdirectory contents restored')
+                        'zipped subdirectory contents restored')
         self.assertFalse(Path('data/source/sub2.zip').is_file(),
                          'restored sub directory archive removed')
         self.assertTrue(Path('data/source/sub3').is_dir(),
-                       'zipped subdirectory restored')
+                        'zipped subdirectory restored')
 
     async def test_box_dirs_subdirs(self):
         with open('data/source/sub/subsub/z.csv', 'rb') as f:
@@ -264,11 +250,11 @@ class TestPy7zaBox(unittest.IsolatedAsyncioTestCase):
         await box(Config(CLI_DEFAULTS | {'glob': 'sub?.zip', 'root': 'data/source', 'unbox': True,
                                          'unbox_multi': True, '7za': '-tzip'}))
         self.assertTrue(Path('data/source/sub3').is_dir(),
-                       'zipped subdirectory restored')
+                        'zipped subdirectory restored')
         self.assertTrue(Path('data/source/sub3/y3.csv').is_file(),
-                       'zipped subdirectory contents restored')
+                        'zipped subdirectory contents restored')
         self.assertTrue(Path('data/source/sub4').is_file(),
-                       'zipped files restored')
+                        'zipped files restored')
         self.setUp()
         await box(Config(CLI_DEFAULTS | {'glob': '**/sub?', 'match_dir': True, 'match_file': False, '7za': '-tzip'}))
         self.assertTrue(Path('data/source/sub3.zip').is_file(),
@@ -279,26 +265,26 @@ class TestPy7zaBox(unittest.IsolatedAsyncioTestCase):
     async def test_box_multi_glob(self):
         await box(Config(CLI_DEFAULTS) | {'glob': ['**/*.csv', '**/*.txt'], 'root': 'data', '7za': '-tzip'})
         self.assertTrue(Path('data/source/sub/test.txt.zip').is_file(),
-                       'txt files matched in multi-glob')
+                        'txt files matched in multi-glob')
         self.assertTrue(Path('data/source/sub/y.csv.zip').is_file(),
-                       'csv files matched in multi-glob')
+                        'csv files matched in multi-glob')
 
     async def test_zip_archives(self):
         await box(Config(CLI_DEFAULTS) | {'glob': '**/*', 'root': 'data', '7za': '-tzip'})
         self.assertTrue(Path('data/source/sub/test.txt.zip').is_file(),
-                       'txt files matched in catch all')
+                        'txt files matched in catch all')
         self.assertTrue(Path('data/source/sub/y.csv.zip').is_file(),
-                       'csv files matched in catch all')
+                        'csv files matched in catch all')
         with open('data/source/new.txt', 'w') as f:
             f.write('test')
         await box(Config(CLI_DEFAULTS) | {'glob': '**/*', 'root': 'data', '7za': '-tzip'})
         self.assertTrue(Path('data/source/new.txt.zip').is_file(),
-                       'new txt files matched in catch all')
+                        'new txt files matched in catch all')
         await box(Config(CLI_DEFAULTS) | {'glob': '**/*.zip', 'unbox': True, 'root': 'data', '7za': '-tzip'})
         self.assertFalse(Path('data/source/sub/test.txt.zip').is_file(),
-                         'zip files were not rezipped and')
+                         'zip files were not re-zipped and')
         self.assertTrue(Path('data/source/sub/test.txt').is_file(),
-                       'original content from previously created archive extracted')
+                        'original content from previously created archive extracted')
 
     async def test_unbox_multi(self):
         await box(Config(CLI_DEFAULTS | {'glob': '**/sub', 'match_dir': True, '7za': '-tzip'}))
