@@ -9,6 +9,9 @@ This package is currently in 'beta', in that it is in use by several users, but 
 ### Added
   - add `--datetime_created` and `--datetime_modified` to `py7za-box` to match files by their creation or modification date, respectively.
 
+### Fixed
+  - re-enable direct run of `py7za_box.py` with fixed package import.
+
 ## [0.2.13] - 2023-11-23
 
 ### Fixed

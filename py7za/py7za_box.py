@@ -7,7 +7,7 @@ from logging import error, warning, info
 from conffu import Config
 from pathlib import Path
 from asyncio import get_event_loop, sleep, gather
-from py7za import Py7za, AsyncIOPool, available_cpu_count, nice_size, create_date_test, ExpressionError
+from py7za import Py7za, AsyncIOPool, available_cpu_count, nice_size, create_date_test, ExpressionError, __version__
 import subprocess
 import re
 from json import load
@@ -328,7 +328,6 @@ async def box(cfg):
 
 
 def print_help():
-    from ._version import __version__
     print(
         '\npy7za-box '+__version__+', command line utility\n'
         '\nPy7za-box ("pizza box") replaces a set of files with individual .zip files\n'
