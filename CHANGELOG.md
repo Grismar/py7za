@@ -6,9 +6,13 @@ This package is currently in 'beta', in that it is in use by several users, but 
 
 ## [0.3.0] - 2024-03-21
 
+### Added
+  - add shorter help message after an error to avoid obscuring the error message.
+  - check to avoid options being passed to box/unbox that are not supported.
+
 ### Changed
-  - (breaking) replace short option for `--target` with `-tp` instead of `-t`
-  - (breaking) add `-t` the short option for `--test`, and `-tm` for `--test_match`
+  - (breaking) replace short option for `--target` with `-tp` instead of `-t`.
+  - (breaking) add `-t` the short option for `--test`, and `-tm` for `--test_match`.
 
 ## [0.2.14] - 2024-03-21
 
@@ -16,7 +20,7 @@ This package is currently in 'beta', in that it is in use by several users, but 
   - add `--datetime_created` and `--datetime_modified` to `py7za-box` to match files by their creation or modification date, respectively.
 
 ### Fixed
-  - re-enable direct run of `py7za_box.py` with fixed package import.
+  - re-enable direct run of `py7za_box.py` CLI application with fixed package import.
 
 ## [0.2.13] - 2023-11-23
 

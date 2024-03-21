@@ -327,6 +327,13 @@ async def box(cfg):
             print(f'TEST: would have started {"un" if unbox else ""}boxing {skipped_test} matches.')
 
 
+def print_short_help():
+    print(
+        '\npy7za-box ' + __version__ + ', command line utility\n'
+        '\nRe-run command with -h/--help for usage information.\n'
+    )
+
+
 def print_help():
     print(
         '\npy7za-box '+__version__+', command line utility\n'
@@ -408,6 +415,13 @@ CLI_DEFAULTS = {
     '7za': ''
 }
 
+CLI_ALL = ['help', 'archive_ext', 'create_dirs', 'delete', 'datetime_created', 'datetime_modified', 'error_log',
+           'group_add', 'group_match', 'log', 'match_dir', 'match_file', 'parallel', 'root', 'regex', 'not_regex',
+           'target', 'unbox', 'unbox_multi', 'output', 'si', 'test', 'test_match', 'overwrite', 'zip_archives',
+           'zip_structure', '7za', 'verbose', 'match_groups', 'glob']
+
+assert set(CLI_DEFAULTS.keys()) < set(CLI_ALL)
+
 
 def group_map(fn, cfg):
     try:
@@ -463,7 +477,7 @@ def cli_entry_point(unbox=False):
 
     if len(cfg.arguments['']) < 2 and 'glob' not in cfg:
         error('Missing required argument glob pattern(s), e.g. `py7za-box *.csv [options]`.')
-        print_help()
+        print_short_help()
         exit(1)
     else:
         cfg.glob = cfg.glob if 'glob' in cfg else cfg.parameters
@@ -521,7 +535,7 @@ def cli_entry_point(unbox=False):
         cfg.output = 'v'
     if cfg.output not in output_modes:
         error(f'Unknown output mode {cfg.output}, provide default(d), list(l), quiet(q), status(s) or verbose(v).')
-        print_help()
+        print_short_help()
         exit(1)
     cfg.output = output_modes[cfg.output]
 
@@ -533,11 +547,16 @@ def cli_entry_point(unbox=False):
     }
     if cfg.overwrite not in overwrite_modes:
         error(f'Unknown overwrite mode {cfg.output}, provide all(a), skip(s), rename_new(u) or rename_existing(t).')
-        print_help()
+        print_short_help()
         exit(1)
     cfg.overwrite = overwrite_modes[cfg.overwrite]
     if cfg.overwrite != 's' and not cfg.unbox:
         warning(f'Overwrite mode {cfg.overwrite} passed, but option will have no effect unless unboxing.')
+
+    if not (set(cfg.from_arguments) < set(CLI_ALL)):
+        error(f'Unknown option(s): {", ".join(set(cfg.keys()) - set(CLI_ALL))}')
+        print_short_help()
+        exit(1)
 
     loop = get_event_loop()
     try:
