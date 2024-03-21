@@ -4,6 +4,12 @@ This package is currently in 'beta', in that it is in use by several users, but 
 
 ## [Unreleased]
 
+## [0.3.0] - 2024-03-21
+
+### Changed
+  - (breaking) replace short option for `--target` with `-tp` instead of `-t`
+  - (breaking) add `-t` the short option for `--test`, and `-tm` for `--test_match`
+
 ## [0.2.14] - 2024-03-21
 
 ### Added
@@ -269,6 +275,8 @@ First release in the wild.
   - Cloned and adapted from python_package_template.
 
 [Unreleased]: /../../../
+[0.3.0]: /../../../tags/0.3.0
+[0.2.14]: /../../../tags/0.2.14
 [0.2.13]: /../../../tags/0.2.13
 [0.2.12]: /../../../tags/0.2.12
 [0.2.11]: /../../../tags/0.2.11
