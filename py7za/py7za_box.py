@@ -458,12 +458,12 @@ def cli_entry_point(unbox=False):
 
     cfg = Config.startup(defaults=CLI_DEFAULTS, no_compound_keys=True, aliases={
         'h': 'help', 'p': 'parallel', 'cd': 'create_dirs', 'md': 'match_dir', 'mf': 'match_file', 'u': 'unbox',
-        'unzip': 'unbox', 'r': 'root', 'zs': 'zip_structure', 't': 'target', 'v': 'verbose', '7': '7za', 'g': 'glob',
+        'unzip': 'unbox', 'r': 'root', 'zs': 'zip_structure', 'tp': 'target', 'v': 'verbose', '7': '7za', 'g': 'glob',
         'o': 'output', 'w': 'overwrite', 'za': 'zip_archives', 'um': 'unbox_multi', 'l': 'log', 'le': 'log_error',
         'unzip_multi': 'unbox_multi', 'error_log': 'log_error', 'el': 'log_error', 're': 'regex',
         'regular_expression': 'regex', 'mg': 'match_groups', 'ga': 'group_add', 'cf': 'create_dirs',
         'create_folders': 'create_dirs', 'nre': 'not_regex', 'not_regular_expression': 'not_regex',
-        'ae': 'archive_ext', 'dtc': 'datetime_created', 'dtm': 'datetime_modified'
+        'ae': 'archive_ext', 'dtc': 'datetime_created', 'dtm': 'datetime_modified', 't': 'test', 'tm': 'test_match'
     })
 
     if unbox:
