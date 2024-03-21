@@ -164,19 +164,19 @@ class TestPy7zaBox(unittest.IsolatedAsyncioTestCase):
 
     async def test_box_overwrite_source_rename_new_zip(self):
         content, new_content = await self._do_test_overwrite('u', suffix='zip')
-        return self._finish_rename_test(content, new_content)
+        return await self._finish_rename_test(content, new_content)
 
     async def test_box_overwrite_source_rename_new_7z(self):
         content, new_content = await self._do_test_overwrite('u', suffix='7z')
-        return self._finish_rename_test(content, new_content)
+        return await self._finish_rename_test(content, new_content)
 
     async def test_box_overwrite_source_rename_existing_zip(self):
         content, new_content = await self._do_test_overwrite('t', suffix='zip')
-        return self._finish_rename_test(new_content, content)
+        return await self._finish_rename_test(new_content, content)
 
     async def test_box_overwrite_source_rename_existing_7z(self):
         content, new_content = await self._do_test_overwrite('t', suffix='7z')
-        return self._finish_rename_test(new_content, content)
+        return await self._finish_rename_test(new_content, content)
 
     async def test_box_dir_default(self):
         await box(Config(CLI_DEFAULTS | {'glob': '**/*.csv', '7za': '-tzip'}))
