@@ -54,6 +54,32 @@ It's recommended you review [zip_structure and create_dirs](../gotchas/#zip_stru
 
 Remove the files that were boxed immediately after boxing (one file at a time) and remove the archive files that were unboxed immediately after unboxing. The default for this switch is `True`.
 
+#### datetime_created
+
+```none
+--datetime_created | -dtc <date/time expression> 
+```
+
+Only match files based on their creation date. You have some flexibility in the date/time expression. You can combine multiple expressions with `and` or `or`, the point in time or period can be as coarse as a year and as fine as a second, and you can specify that the timestamp for the file has to be either in, before, or after the specified point or period.
+
+Some examples of valid date/time expressions:
+```none
+< 2023
+before 2020-01-01 or on or after 2022-01-01
+< 2020-01-01 or >= 2022-01-01
+on 2024-03-20 and before 12:00
+> 2020-03-14 01:59:20
+```
+Note that dates have to be in ISO format (YYYY-MM-DD) and times in zero-padded 24-hour format (HH:MM:SS). So, `2024-03-21` for 21 March 2024, and `01:59` for 1:59 AM or `13:59` for 1:59 PM.
+
+#### datetime_modified
+
+```none
+--datetime_modified | -dtm <date/time expression> 
+```
+
+Only match files based on their most recent modification date. The format for the date/time expression is the same as for [datetime_created](#datetime_created).  
+
 #### error_log
 
 ```none

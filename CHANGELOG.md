@@ -4,6 +4,11 @@ This package is currently in 'beta', in that it is in use by several users, but 
 
 ## [Unreleased]
 
+## [0.2.14] - 2024-03-21
+
+### Added
+  - add `--datetime_created` and `--datetime_modified` to `py7za-box` to match files by their creation or modification date, respectively.
+
 ## [0.2.13] - 2023-11-23
 
 ### Fixed

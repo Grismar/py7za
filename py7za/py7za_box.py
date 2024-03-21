@@ -7,7 +7,7 @@ from logging import error, warning, info
 from conffu import Config
 from pathlib import Path
 from asyncio import get_event_loop, sleep, gather
-from py7za import Py7za, AsyncIOPool, available_cpu_count, nice_size
+from py7za import Py7za, AsyncIOPool, available_cpu_count, nice_size, create_date_test, ExpressionError
 import subprocess
 import re
 from json import load
@@ -51,6 +51,17 @@ async def box(cfg):
             exit(1)
     else:
         not_regex = False
+
+    try:
+        created_test = False if 'datetime_created' not in cfg else create_date_test(cfg['datetime_created'])
+    except ExpressionError as e:
+        error(f'Invalid expression for --datetime_created: {e}')
+        exit(1)
+    try:
+        modified_test = False if 'datetime_modified' not in cfg else create_date_test(cfg['datetime_modified'])
+    except ExpressionError as e:
+        error(f'Invalid expression for --datetime_modified: {e}')
+        exit(1)
 
     try:
         if isinstance(cfg['parallel'], str) and cfg['parallel'] and cfg['parallel'][-1].lower() == 'x':
@@ -138,6 +149,19 @@ async def box(cfg):
                     info(f'Skipping {fn} as it matches provided not_regex.')
                     skipped += 1
                     continue
+                if created_test or modified_test:
+                    stat_info = stat(fn)
+                    created = stat_info.st_ctime
+                    modified = stat_info.st_mtime
+
+                    if created_test and not created_test(datetime.fromtimestamp(created)):
+                        info(f'Skipping {fn} as it does not match provided creation date criteria.')
+                        skipped += 1
+                        continue
+                    if modified_test and not modified_test(datetime.fromtimestamp(modified)):
+                        info(f'Skipping {fn} as it does not match provided modification date criteria.')
+                        skipped += 1
+                        continue
                 if fn.is_file() and cfg['match_file']:
                     if not unbox and not zip_archives and fn.suffix in ARCHIVE_SUFFIXES:
                         info(f'Skipping {fn} as it is an archive and --zip_archives was not specified.')
@@ -223,7 +247,8 @@ async def box(cfg):
                         if test_match:
                             print(f'\x1b[2K\r{content}')
                         else:
-                            print(f'\x1b[2K\rTEST in "{wd}": 7za.exe a "{target_path}{cfg.suffix}" "{content}" {cli_options}')
+                            print(f'\x1b[2K\rTEST in "{wd}": '
+                                  f'7za.exe a "{target_path}{cfg.suffix}" "{content}" {cli_options}')
                 else:
                     archive = root / sub_path / fn
                     if not unbox_multi and (
@@ -319,6 +344,8 @@ def print_help():
         '-ae/--archive_ext <ext>   : Match original, minus archive extension. [None]\n'
         '-cd/--create_dirs         : Recreate dir structure in target path. [True]\n'
         '-d/--delete               : Remove the source after (un)boxing. [True]\n'
+        '-dtc/--datetime_created   : Match files on creation date/time. [None]\n'
+        '-dtm/--datetime_modified  : Match files on modification date/time. [None]\n'
         '-el/--error_log <path>    : Log warnings and error messages to file. [None]\n'
         '-gm/--group_match [bool]  : Group files with grouped suffixes. [True]\n'
         '-ga/--group_add <path>    : Path to extra .json group definitions. [None]\n'
@@ -356,6 +383,7 @@ def print_help():
         '   unbox **/*.csv.zip --root C:/Archive -t C:/Data\n'
         'Zip directories named `Photo*` individually using maximum compression:\n'
         '   box Photo* -r "C:/My Photos" -md -mf 0 -t C:/Archive -7 "-mx9"\n'
+        '\nMore on https://py7za.readthedocs.io/en/latest/getting_started\n'        
         '\nNote that you can gracefully interrupt a (un)boxing run with Ctrl+C.\n'
     )
 
@@ -422,7 +450,7 @@ def cli_entry_point(unbox=False):
         'unzip_multi': 'unbox_multi', 'error_log': 'log_error', 'el': 'log_error', 're': 'regex',
         'regular_expression': 'regex', 'mg': 'match_groups', 'ga': 'group_add', 'cf': 'create_dirs',
         'create_folders': 'create_dirs', 'nre': 'not_regex', 'not_regular_expression': 'not_regex',
-        'ae': 'archive_ext'
+        'ae': 'archive_ext', 'dtc': 'datetime_created', 'dtm': 'datetime_modified'
     })
 
     if unbox:
