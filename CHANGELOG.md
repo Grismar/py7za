@@ -4,6 +4,12 @@ This package is currently in 'beta', in that it is in use by several users, but 
 
 ## [Unreleased]
 
+## [0.3.2] - 2024-04-03
+
+### Added
+  - add date to version output on CLI
+  - include link to change log in readthedocs documentation
+
 ## [0.3.1] - 2024-03-21
 
 ### Fixed
@@ -284,7 +290,8 @@ First release in the wild.
   - Cloned and adapted from python_package_template.
 
 [Unreleased]: /../../../
-[0.3.0]: /../../../tags/0.3.1
+[0.3.2]: /../../../tags/0.3.2
+[0.3.1]: /../../../tags/0.3.1
 [0.3.0]: /../../../tags/0.3.0
 [0.2.14]: /../../../tags/0.2.14
 [0.2.13]: /../../../tags/0.2.13

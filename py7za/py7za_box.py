@@ -7,7 +7,8 @@ from logging import error, warning, info
 from conffu import Config
 from pathlib import Path
 from asyncio import get_event_loop, sleep, gather
-from py7za import Py7za, AsyncIOPool, available_cpu_count, nice_size, create_date_test, ExpressionError, __version__
+from py7za import (Py7za, AsyncIOPool, available_cpu_count, nice_size, create_date_test, ExpressionError, __version__,
+                   __version_date__)
 import subprocess
 import re
 from json import load
@@ -329,14 +330,14 @@ async def box(cfg):
 
 def print_short_help():
     print(
-        '\npy7za-box ' + __version__ + ', command line utility\n'
+        '\npy7za-box ' + __version__ +' (' + __version_date__ + '), command line utility\n'
         '\nRe-run command with -h/--help for usage information.\n'
     )
 
 
 def print_help():
     print(
-        '\npy7za-box '+__version__+', command line utility\n'
+        '\npy7za-box ' + __version__ + ' (' + __version_date__ + '), command line utility\n'
         '\nPy7za-box ("pizza box") replaces a set of files with individual .zip files\n'
         'containing the originals, or does the reverse by "unboxing" the archives.\n'
         'Py7za uses 7za.exe, more information on the project page.\n'
