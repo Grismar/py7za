@@ -87,7 +87,7 @@ def create_date_test(expr: str) -> Optional[Callable[[datetime], bool]]:
             pass
         raise ExpressionError(f'Unknown date expression `{expr}`')
 
-    # create test function based on operator and date range
+    # create a test function based on operator and date range
     if _operator == '=':
         return lambda s: _start <= s <= _end
     elif _operator == '<':
@@ -98,3 +98,5 @@ def create_date_test(expr: str) -> Optional[Callable[[datetime], bool]]:
         return lambda s: s <= _end
     elif _operator == '>=':
         return lambda s: s >= _start
+    else:
+        raise ExpressionError(f'Unknown operator `{_operator}`')
