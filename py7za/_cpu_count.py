@@ -5,8 +5,8 @@ from subprocess import Popen, PIPE
 
 def available_cpu_count():
     """
-    Determine the number of available virtual or physical CPUs on the system,
-    running the scripts, i.e. user/real as output by time(1) when called with
+    determine the number of available virtual or physical CPUs on the system,
+    running the scripts i.e., user/real as output by time(1) when called with
     an optimally scaling userspace-only program.
     :return: int, number of available virtual or physical CPUs
     """
@@ -23,7 +23,7 @@ def available_cpu_count():
     except IOError:
         pass
 
-    # Python 2.6+, covers most use cases where cpuset is not available
+    # Python 2.6+: covers most use cases where cpuset is not available
     try:
         import multiprocessing
         return multiprocessing.cpu_count()

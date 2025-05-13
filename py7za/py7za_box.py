@@ -97,11 +97,11 @@ async def box(cfg):
     info_command = cfg.output == 'v'
     level = logging.INFO if info_command else logging.WARNING
     if 'log_error' in cfg:
-        # only log to file
+        # only log to a file
         logging.basicConfig(
             level=level, format='%(asctime)s %(levelname)s %(message)s', filename=cfg.log_error, filemode='a')
     else:
-        # only log to console, no additional setup required
+        # only log to the console, no additional setup required
         logging.basicConfig(
             level=level, format='%(asctime)s %(levelname)s %(message)s')
     update_status = cfg.output == 's'
@@ -350,6 +350,7 @@ def print_help():
         '-h/--help                 : This text.\n'
         '-ae/--archive_ext <ext>   : Match original, minus archive extension. [None]\n'
         '-cd/--create_dirs         : Recreate dir structure in target path. [True]\n'
+        '-cfg/--config <path>      : Path to .json config file. [None]\n'
         '-d/--delete               : Remove the source after (un)boxing. [True]\n'
         '-dtc/--datetime_created   : Match files on creation date/time. [None]\n'
         '-dtm/--datetime_modified  : Match files on modification date/time. [None]\n'
@@ -392,6 +393,9 @@ def print_help():
         '   box Photo* -r "C:/My Photos" -md -mf 0 -t C:/Archive -7 "-mx9"\n'
         '\nMore on https://py7za.readthedocs.io/en/latest/getting_started\n'        
         '\nNote that you can gracefully interrupt a (un)boxing run with Ctrl+C.\n'
+        '\n'
+        'When providing a .json configuration, the key/value pairs in the configuration\n'
+        'match the CLI options, and the glob expressions are under the "glob" key.\n'
     )
 
 
@@ -506,7 +510,7 @@ def cli_entry_point(unbox=False):
         if 'unbox' in cfg.arguments:
             warning(f'The --unbox_multi option was specified, but unbox was set to False, so the option is ignored.')
         else:
-            # set unbox to true if only unbox_multi was provided
+            # set unboxing to true if only unbox_multi was provided
             cfg.unbox = True
 
     if cfg.zip_structure and cfg.create_dirs:

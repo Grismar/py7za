@@ -10,8 +10,8 @@ from datetime import datetime
 
 def arg_split(args, platform=os_name):
     """
-    Like calling `shlex.split`, but sets `posix=` according to platform
-    and unquotes previously quoted arguments on Windows
+    like calling `shlex.split`, but sets `posix=` according to platform
+    and unquotes previously quoted arguments on Windows.
     :param args: a command line string consisting of a command with arguments, e.g. 'dir "C:/Program Files"'
     :param platform: a value like os.name would return, e.g. 'nt'
     :return: a list of arguments like shlex.split(args) would have returned
@@ -20,6 +20,7 @@ def arg_split(args, platform=os_name):
             for a in (split(args, posix=False) if platform == 'nt' else split(args))]
 
 
+# noinspection GrazieInspection
 class Py7za:
     """
     Wrapper class for running 7za.exe.
@@ -41,8 +42,8 @@ class Py7za:
 
     def __init__(self, arguments: Union[str, List[str]], on_start: Callable = None, working_dir: str = '.'):
         """
-        Creates an (awaitable) object ready to run 7za with given arguments.
-        :param arguments: arguments to pass to 7za, after processing (always pass progress and output>1, disable log)
+        creates an (awaitable) object ready to run 7za with given arguments.
+        :param arguments: arguments to pass to 7za, after processing (always pass progress and output > 1, disable log)
         :param on_start: callback to be called just before starting a 7za subprocess is started
         :param working_dir: working directory for 7za
         """
@@ -133,8 +134,8 @@ class Py7za:
         Opens and lists contents of archive, returning either just metadata or metadata and a file list with details
         :param archive: name of the archive to list
         :param meta_data_only: whether to only return metadata, or parse and include archive contents details
-        :return: tuple of size, compressed size, number of files, number of directories, and list of files
-                 list of files is empty or a list of tuples of datetime, attributes, size, compressed size, and name
+        :return: tuple of size, compressed size, number of files, number of directories, and a list of files
+                 the list of files is empty or a list of tuples of datetime, attributes, size, compressed size, and name
         """
         proc = await create_subprocess_exec(
             cls.executable_7za, 'l', archive, stdout=asyncio.subprocess.PIPE)
