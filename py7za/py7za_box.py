@@ -453,6 +453,18 @@ def group_map(fn, cfg):
 
 
 def cli_entry_point(unbox=False):
+    try:
+        main(unbox)
+    except Exception as e:
+        if __debug__:
+            raise
+        else:
+            error(f'Unhandled exception: {e}')
+            print_short_help()
+            exit(1)
+
+
+def main(unbox=False):
     global aiop
 
     # enable sufficient ansi support on Windows
@@ -461,15 +473,20 @@ def cli_entry_point(unbox=False):
         k = windll.kernel32
         k.SetConsoleMode(k.GetStdHandle(-11), 7)
 
-    cfg = Config.startup(defaults=CLI_DEFAULTS, no_compound_keys=True, aliases={
-        'h': 'help', 'p': 'parallel', 'cd': 'create_dirs', 'md': 'match_dir', 'mf': 'match_file', 'u': 'unbox',
-        'unzip': 'unbox', 'r': 'root', 'zs': 'zip_structure', 'tp': 'target', 'v': 'verbose', '7': '7za', 'g': 'glob',
-        'o': 'output', 'w': 'overwrite', 'za': 'zip_archives', 'um': 'unbox_multi', 'l': 'log', 'le': 'log_error',
-        'unzip_multi': 'unbox_multi', 'error_log': 'log_error', 'el': 'log_error', 're': 'regex',
-        'regular_expression': 'regex', 'mg': 'match_groups', 'ga': 'group_add', 'cf': 'create_dirs',
-        'create_folders': 'create_dirs', 'nre': 'not_regex', 'not_regular_expression': 'not_regex',
-        'ae': 'archive_ext', 'dtc': 'datetime_created', 'dtm': 'datetime_modified', 't': 'test', 'tm': 'test_match'
-    })
+    try:
+        cfg = Config.startup(defaults=CLI_DEFAULTS, no_compound_keys=True, aliases={
+            'h': 'help', 'p': 'parallel', 'cd': 'create_dirs', 'md': 'match_dir', 'mf': 'match_file', 'u': 'unbox',
+            'unzip': 'unbox', 'r': 'root', 'zs': 'zip_structure', 'tp': 'target', 'v': 'verbose', '7': '7za', 'g': 'glob',
+            'o': 'output', 'w': 'overwrite', 'za': 'zip_archives', 'um': 'unbox_multi', 'l': 'log', 'le': 'log_error',
+            'unzip_multi': 'unbox_multi', 'error_log': 'log_error', 'el': 'log_error', 're': 'regex',
+            'regular_expression': 'regex', 'mg': 'match_groups', 'ga': 'group_add', 'cf': 'create_dirs',
+            'create_folders': 'create_dirs', 'nre': 'not_regex', 'not_regular_expression': 'not_regex',
+            'ae': 'archive_ext', 'dtc': 'datetime_created', 'dtm': 'datetime_modified', 't': 'test', 'tm': 'test_match'
+        })
+    except IndexError:
+        error('Pass path to existing configuration e.g., `-cfg some.json`')
+        print_short_help()
+        exit(1)
 
     if unbox:
         if 'unbox' in cfg.arguments and not cfg.unbox:
