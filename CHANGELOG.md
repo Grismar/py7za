@@ -4,6 +4,9 @@ This package is currently in 'beta', in that it is in use by several users, but 
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-05-13
+  - detect unknown operator in date test
+
 ## [0.3.2] - 2024-04-03
 
 ### Added
