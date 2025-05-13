@@ -4,8 +4,13 @@ This package is currently in 'beta', in that it is in use by several users, but 
 
 ## [Unreleased]
 
+## [0.4.1] - 2025-05-13
+  - fix warning regarding legacy `bdist_wheel` 
+
 ## [0.4.0] - 2025-05-13
   - detect unknown operator in date test
+  - add help text for configuration and catch errors for non-existent configuration files
+  - catch exceptions when running in CLI, except when debugging
 
 ## [0.3.2] - 2024-04-03
 
