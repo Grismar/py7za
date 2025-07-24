@@ -7,10 +7,11 @@ This package is currently in 'beta', in that it is in use by several users, but 
 ## [0.4.2] - 2025-07-22
 
 ### Added
-  - add `--ansi 0` switch to disable use of ANSI codes to overwrite lines (for redirected output) 
+  - add `--ansi 0` switch to disable use of ANSI codes to overwrite lines (for redirected output)
 
 ### Fixed
-  - add ANSI bit on console instead of overwriting 
+  - add ANSI bit on console instead of overwriting
+  - factor out ANSI code printing
 
 ## [0.4.1] - 2025-05-13
 
