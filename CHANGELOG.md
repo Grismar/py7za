@@ -4,10 +4,22 @@ This package is currently in 'beta', in that it is in use by several users, but 
 
 ## [Unreleased]
 
+## [0.4.2] - 2025-07-22
+
+### Added
+  - add `--ansi 0` switch to disable use of ANSI codes to overwrite lines (for redirected output) 
+
+### Fixed
+  - add ANSI bit on console instead of overwriting 
+
 ## [0.4.1] - 2025-05-13
+
+### Fixed
   - fix warning regarding legacy `bdist_wheel` 
 
 ## [0.4.0] - 2025-05-13
+
+### Added
   - detect unknown operator in date test
   - add help text for configuration and catch errors for non-existent configuration files
   - catch exceptions when running in CLI, except when debugging

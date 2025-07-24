@@ -1,6 +1,6 @@
 from shlex import split
 from sys import stdout
-from os import remove as os_remove, stat, name as os_name
+from os import remove as os_remove, stat
 from datetime import datetime, timezone
 import logging
 from logging import error, warning, info
@@ -8,7 +8,7 @@ from conffu import Config
 from pathlib import Path
 from asyncio import get_event_loop, sleep, gather
 from py7za import (Py7za, AsyncIOPool, available_cpu_count, nice_size, create_date_test, ExpressionError, __version__,
-                   __version_date__)
+                   __version_date__, aprint, ansi_enabled)
 import subprocess
 import re
 from json import load
@@ -204,11 +204,11 @@ async def box(cfg):
         nonlocal done, running, current, total, from_into
         while True:
             if total == 0:
-                stdout.write(f'\x1b[2K\rStarting ... ')
+                aprint('Starting ... ')
             else:
-                stdout.write(f'\x1b[2K\rProcessing: {current} / {total} '
-                             f'[{nice_size(total_content_size, si)} {from_into} {nice_size(total_zip_size, si)}] ... '
-                             f'{" ".join([f"{str(py7za.progress)}/100%" for py7za in running if py7za.progress])}')
+                aprint(f'Processing: {current} / {total} '
+                       f'[{nice_size(total_content_size, si)} {from_into} {nice_size(total_zip_size, si)}] ... '
+                       f'{" ".join([f"{str(py7za.progress)}/100%" for py7za in running if py7za.progress])}')
             stdout.flush()
             if done:
                 return
@@ -224,10 +224,10 @@ async def box(cfg):
         target = Path(cfg.target).absolute() if 'target' in cfg else root
         n = 0
         try:
-            stdout.write(f'\x1b[2K\rMatching glob expression(s)... ')
+            aprint('Matching glob expression(s)... ')
             for sub_path, fn in globber(cfg.root, cfg.glob):
                 if print_result and n % 100 == 0 and not test:
-                    stdout.write(f'\x1b[2K\rMatching [{n}] ... ')
+                    aprint(f'Matching [{n}] ... ')
                 n += 1
                 if create_dirs and not test:
                     (target / sub_path).mkdir(parents=True, exist_ok=True)
@@ -246,10 +246,10 @@ async def box(cfg):
                     else:
                         skipped_test += 1
                         if test_match:
-                            print(f'\x1b[2K\r{content}')
+                            aprint(f'{content}\n')
                         else:
-                            print(f'\x1b[2K\rTEST in "{wd}": '
-                                  f'7za.exe a "{target_path}{cfg.suffix}" "{content}" {cli_options}')
+                            aprint(f'TEST in "{wd}": '
+                                   f'7za.exe a "{target_path}{cfg.suffix}" "{content}" {cli_options}')
                 else:
                     archive = root / sub_path / fn
                     if not unbox_multi and (
@@ -264,12 +264,12 @@ async def box(cfg):
                     else:
                         skipped_test += 1
                         if test_match:
-                            print(f'\x1b[2K\r{archive}')
+                            aprint(f'{archive}\n')
                         else:
-                            print(f'\x1b[2K\rTEST: 7za.exe x "{archive}" "-o{target_path}" {cli_options}')
+                            aprint(f'TEST: 7za.exe x "{archive}" "-o{target_path}" {cli_options}')
             if print_result:
-                stdout.write(f'\x1b[2K\rMatched {n} object(s), '
-                             f'start processing in up to {aiop.size} parallel processes ...\n')
+                aprint(f'Matched {n} object(s), '
+                       f'start processing in up to {aiop.size} parallel processes ...\n')
             total = len(zippers)
             async for py7za in aiop.arun_many(zippers):
                 finished += 1
@@ -296,15 +296,14 @@ async def box(cfg):
                                 f'{fn},{nice_size(cs, si)},{cs},{nice_size(zs, si)},{zs}\n')
                     if print_result:
                         if list_status:
-                            stdout.write(f'\x1b[2K\r'
-                                         f'{datetime.strftime(datetime.now(), "%H:%M:%S")}  '
-                                         f'{nice_size(cs, si)} {from_into} {nice_size(zs, si)} {fn}\n')
-                            stdout.write(f'Total: {finished} / {total} '
-                                         f'[{nice_size(total_content_size, si)} '
-                                         f'{from_into} {nice_size(total_zip_size, si)}] ({current - finished} running)')
+                            aprint(f'{datetime.strftime(datetime.now(), "%H:%M:%S")}  '
+                                   f'{nice_size(cs, si)} {from_into} {nice_size(zs, si)} {fn}\n')
+                            aprint(f'Total: {finished} / {total} '
+                                   f'[{nice_size(total_content_size, si)} '
+                                   f'{from_into} {nice_size(total_zip_size, si)}] ({current - finished} running)')
                         else:
-                            stdout.write(f'{datetime.strftime(datetime.now(), "%H:%M:%S")}  '
-                                         f'{nice_size(cs, si)} {from_into} {nice_size(zs, si)} {fn}\n')
+                            aprint(f'{datetime.strftime(datetime.now(), "%H:%M:%S")}  '
+                                   f'{nice_size(cs, si)} {from_into} {nice_size(zs, si)} {fn}\n')
                         stdout.flush()
                 if unbox and delete:
                     os_remove(py7za.arguments[1])
@@ -320,7 +319,7 @@ async def box(cfg):
 
     if cfg.output != 'q':
         if update_status or print_result:
-            stdout.write('\x1b[2K\r')
+            aprint()
         print(f'Completed processing {nice_size(total_content_size)} '
               f'of files {"from" if unbox else "into"} {total} archives, totaling {nice_size(total_zip_size)}.'
               f'\nTook {datetime.now()-start_time}. Skipped {skipped} files matching glob.')
@@ -348,6 +347,7 @@ def print_help():
         '                            Add quotes if your pattern contains spaces.\n'
         'Options:\n'
         '-h/--help                 : This text.\n'
+        '-a/--ansi                 : Use ANSI codes to limit scrolling. [True]\n'
         '-ae/--archive_ext <ext>   : Match original, minus archive extension. [None]\n'
         '-cd/--create_dirs         : Recreate dir structure in target path. [True]\n'
         '-cfg/--config <path>      : Path to .json config file. [None]\n'
@@ -401,6 +401,7 @@ def print_help():
 
 CLI_DEFAULTS = {
     'parallel': '0',
+    'ansi': True,
     'delete': True,
     'create_dirs': True,
     'match_groups': True,
@@ -423,7 +424,7 @@ CLI_DEFAULTS = {
 CLI_ALL = ['help', 'archive_ext', 'create_dirs', 'delete', 'datetime_created', 'datetime_modified', 'error_log',
            'group_add', 'group_match', 'log', 'match_dir', 'match_file', 'parallel', 'root', 'regex', 'not_regex',
            'target', 'unbox', 'unbox_multi', 'output', 'si', 'test', 'test_match', 'overwrite', 'zip_archives',
-           'zip_structure', '7za', 'verbose', 'match_groups', 'glob']
+           'zip_structure', '7za', 'verbose', 'match_groups', 'glob', 'ansi']
 
 assert set(CLI_DEFAULTS.keys()) < set(CLI_ALL)
 
@@ -467,12 +468,6 @@ def cli_entry_point(unbox=False):
 def main(unbox=False):
     global aiop
 
-    # enable sufficient ansi support on Windows
-    if os_name == 'nt':
-        from ctypes import windll
-        k = windll.kernel32
-        k.SetConsoleMode(k.GetStdHandle(-11), 7)
-
     try:
         cfg = Config.startup(defaults=CLI_DEFAULTS, no_compound_keys=True, aliases={
             'h': 'help', 'p': 'parallel', 'cd': 'create_dirs', 'md': 'match_dir', 'mf': 'match_file', 'u': 'unbox',
@@ -481,7 +476,8 @@ def main(unbox=False):
             'unzip_multi': 'unbox_multi', 'error_log': 'log_error', 'el': 'log_error', 're': 'regex',
             'regular_expression': 'regex', 'mg': 'match_groups', 'ga': 'group_add', 'cf': 'create_dirs',
             'create_folders': 'create_dirs', 'nre': 'not_regex', 'not_regular_expression': 'not_regex',
-            'ae': 'archive_ext', 'dtc': 'datetime_created', 'dtm': 'datetime_modified', 't': 'test', 'tm': 'test_match'
+            'ae': 'archive_ext', 'dtc': 'datetime_created', 'dtm': 'datetime_modified', 't': 'test', 'tm': 'test_match',
+            'a': 'ansi'
         })
     except IndexError:
         error('Pass path to existing configuration e.g., `-cfg some.json`')
@@ -492,6 +488,9 @@ def main(unbox=False):
         if 'unbox' in cfg.arguments and not cfg.unbox:
             warning('"--unbox False" option passed to `unbox` ignored, unboxing.')
         cfg.unbox = True
+
+    if not ansi_enabled(cfg.ansi):
+        warning("Failed to enable ANSI mode.")
 
     if cfg.get_as_type('help', bool, False):
         print_help()
