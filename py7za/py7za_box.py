@@ -1,3 +1,4 @@
+import sys
 from shlex import split
 from sys import stdout
 from os import remove as os_remove, stat
@@ -457,7 +458,7 @@ def cli_entry_point(unbox=False):
     try:
         main(unbox)
     except Exception as e:
-        if __debug__:
+        if '--debug' in sys.argv:
             raise
         else:
             error(f'Unhandled exception: {e}')
@@ -479,8 +480,8 @@ def main(unbox=False):
             'ae': 'archive_ext', 'dtc': 'datetime_created', 'dtm': 'datetime_modified', 't': 'test', 'tm': 'test_match',
             'a': 'ansi'
         })
-    except IndexError:
-        error('Pass path to existing configuration e.g., `-cfg some.json`')
+    except (IndexError, FileExistsError, OSError) as e:
+        error('Pass path to existing and accessible configuration e.g., `-cfg some.json`\nError: {}'.format(e))
         print_short_help()
         exit(1)
 

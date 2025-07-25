@@ -41,7 +41,7 @@ def main(arg_version):
 
         changelog_version = get_changelog_version()
         if __version__ != changelog_version:
-            print('Version does not match: {} != {}'.format(__version__, changelog_version))
+            print('Code version does not match changelog: {} != {}'.format(__version__, changelog_version))
             exit(1)
 
         latest_tag = get_latest_git_tag()

@@ -4,6 +4,12 @@ This package is currently in 'beta', in that it is in use by several users, but 
 
 ## [Unreleased]
 
+## [0.4.3] - 2025-07-25
+
+### Fixed
+  - detect debug mode on a switch instead of `__debug__` (which is always `True` unless running with `-O`
+  - catch more .json errors 
+
 ## [0.4.2] - 2025-07-22
 
 ### Added

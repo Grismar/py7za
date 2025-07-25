@@ -2,7 +2,6 @@
 REM change working directory to project root
 cd %~dp0\..
 REM run tests, only continue if tests succeeded
-call scripts/cleanup.bat
 call scripts/run_tests.bat
 if errorlevel 1 goto tests_failed
 REM cleanup, build and deploy
